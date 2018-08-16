@@ -1,0 +1,17 @@
+debug*
+checkpoints/
+models/flownet2*
+results/
+build/
+*/Thumbs.db
+*/**/__pycache__
+*/*.pyc
+*/**/*.pyc
+*/**/**/*.pyc
+*/**/**/**/*.pyc
+*/**/**/**/**/*.pyc
+*/*.so*
+*/**/*.so*
+*/**/*.dylib*
+*.DS_Store
+*~
