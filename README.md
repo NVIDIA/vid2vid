@@ -57,7 +57,8 @@ cd vid2vid
   - The second is to use another model which was trained on single images (e.g. pix2pixHD) by specifying `--use_single_G`. 
   - The third is forcing the model to also synthesize the first frame by specifying `--no_first_img`. This must be trained separately before inference.
   - Throughout the rest of the repo, we assume the second option is adopted. 
-- Please download the pre-trained Cityscapes model first:
+- First, download and compile a snapshot of the FlowNet2 repo from https://github.com/NVIDIA/flownet2-pytorch by running `python scripts/download_flownet2.py`.
+- Please download the pre-trained Cityscapes model by:
   ```bash
   python scripts/download_models.py
   ```
@@ -90,7 +91,7 @@ It has slightly worse performance, and only works on 1024 x 512 resolution.
 
 
 ### Training
-- First, download a snapshot of the FlowNet2 repo from https://github.com/NVIDIA/flownet2-pytorch by running `python scripts/download_flownet2.py`.
+- First, download the FlowNet2 checkpoint file by running `python scripts/download_models_flownet2.py`.
 - Training with 8 GPUs:
   - We adopt a coarse-to-fine approach, sequentially increasing the resolution from 512 x 256, 1024 x 512, to 2048 x 1024.
   - Train a model at 512 x 256 resolution (`bash ./scripts/train_512.sh`)
