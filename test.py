@@ -29,7 +29,7 @@ input_nc = 1 if opt.label_nc != 0 else opt.input_nc
 web_dir = os.path.join(opt.results_dir, opt.name, '%s_%s' % (opt.phase, opt.which_epoch))
 webpage = html.HTML(web_dir, 'Experiment = %s, Phase = %s, Epoch = %s' % (opt.name, opt.phase, opt.which_epoch))
 
-print(len(dataset))
+print('Doing %d frames' % len(dataset))
 for i, data in enumerate(dataset):
     if i >= opt.how_many:
         break    
