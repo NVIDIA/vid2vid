@@ -43,7 +43,7 @@ class TestDataset(BaseDataset):
         transform_scaleB = get_transform(self.opt, params)
         transform_scaleA = get_transform(self.opt, params, method=Image.NEAREST, normalize=False) if self.A_is_label else transform_scaleB
    
-        B = inst = 0
+        A = B = inst = 0
         for i in range(tG):                                                   
             A_path = self.A_paths[self.seq_idx][self.frame_idx + i]            
             Ai = self.get_image(A_path, transform_scaleA)            
