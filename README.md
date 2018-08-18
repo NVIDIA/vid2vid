@@ -4,7 +4,7 @@
 
 # vid2vid
 ### [[Project]](https://tcwang0509.github.io/vid2vid/) [[YouTube]](https://youtu.be/S1OwOd-war8) Paper (Coming soon)<br>
-Pytorch implementation of our method for high-resolution (e.g. 2048x1024) photorealistic video-to-video translation. It can be used for turning semantic label maps into photo-realistic videos, synthesizing people talking from edge maps, or generating human bodies from poses. <br><br>
+Pytorch implementation of our method for high-resolution (e.g., 2048x1024) photorealistic video-to-video translation. It can be used for turning semantic label maps into photo-realistic videos, synthesizing people talking from edge maps, or generating human bodies from poses. <br><br>
 [Video-to-Video Synthesis](https://tcwang0509.github.io/vid2vid/)  
  [Ting-Chun Wang](https://tcwang0509.github.io/)<sup>1</sup>, [Ming-Yu Liu](http://mingyuliu.net/)<sup>1</sup>, [Jun-Yan Zhu](http://people.csail.mit.edu/junyanz/)<sup>1,2</sup>, [Guilin Liu](https://liuguilin1225.github.io/)<sup>1</sup>, Andrew Tao<sup>1</sup>, [Jan Kautz](http://jankautz.com/)<sup>1</sup>, [Bryan Catanzaro](http://catanzaro.name/)<sup>1</sup>  
  <sup>1</sup>NVIDIA Corporation, <sup>2</sup>MIT  
@@ -51,7 +51,7 @@ cd vid2vid
 - We include an example Cityscapes video in the `datasets` folder.
 - To generate the first frame for the model, there are 3 different ways. 
   - The first is using the real image by specifying `--use_real_img`. 
-  - The second is to use another model which was trained on single images (e.g. pix2pixHD) by specifying `--use_single_G`. 
+  - The second is to use another model which was trained on single images (e.g., pix2pixHD) by specifying `--use_single_G`. 
   - The third is forcing the model to also synthesize the first frame by specifying `--no_first_img`. This must be trained separately before inference.
   - Throughout the rest of the repo, we assume the second option is adopted. 
 - First, download and compile a snapshot of the FlowNet2 repo from https://github.com/NVIDIA/flownet2-pytorch by running `python scripts/download_flownet2.py`.
@@ -66,8 +66,7 @@ cd vid2vid
   ```
   The test results will be saved to a html file here: `./results/label2city_2048/test_latest/index.html`.
 
-- A more compact model trained with 1 GPU is also provided. 
-It has slightly worse performance, and only works on 1024 x 512 resolution.
+- We also provide a smaller model trained with 1 GPU, which produces slightly worse performance at 1024 x 512 resolution.
   - Please download the model by
   ```bash
   python scripts/download_models_g1.py
@@ -78,7 +77,7 @@ It has slightly worse performance, and only works on 1024 x 512 resolution.
   python test.py --name label2city_1024_g1 --loadSize 1024 --n_scales_spatial 3 --use_instance --fg --n_downsample_G 2 --use_single_G
   ```
 
-- More example scripts can be found in the `scripts` directory.
+- You can find more example scripts in the `scripts` directory.
 
 
 ### Dataset
@@ -154,4 +153,4 @@ If you find this useful for your research, please use the following.
 ```
 
 ## Acknowledgments
-This code borrows heavily from [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix) and [pix2pixHD]().
+This code borrows heavily from [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix) and [pix2pixHD](https://github.com/NVIDIA/pix2pixHD).
