@@ -3,7 +3,7 @@
 <br><br><br><br>
 
 # vid2vid
-### [[Project]](https://tcwang0509.github.io/vid2vid/) [[YouTube]](https://youtu.be/S1OwOd-war8) [[Paper]](https://tcwang0509.github.io/vid2vid/paper_vid2vid.pdf) [[ArXiv]](https://arxiv.org/)  <br>
+### [[Project]](https://tcwang0509.github.io/vid2vid/) [[YouTube]](https://youtu.be/S1OwOd-war8) Paper (Coming soon)<br>
 Pytorch implementation of our method for high-resolution (e.g. 2048x1024) photorealistic video-to-video translation. It can be used for turning semantic label maps into photo-realistic videos, synthesizing people talking from edge maps, or generating human bodies from poses. <br><br>
 [Video-to-Video Synthesis](https://tcwang0509.github.io/vid2vid/)  
  [Ting-Chun Wang](https://tcwang0509.github.io/)<sup>1</sup>, [Ming-Yu Liu](http://mingyuliu.net/)<sup>1</sup>, [Jun-Yan Zhu](http://people.csail.mit.edu/junyanz/)<sup>1,2</sup>, [Guilin Liu](https://liuguilin1225.github.io/)<sup>1</sup>, Andrew Tao<sup>1</sup>, [Jan Kautz](http://jankautz.com/)<sup>1</sup>, [Bryan Catanzaro](http://catanzaro.name/)<sup>1</sup>  
@@ -38,10 +38,7 @@ Pytorch implementation of our method for high-resolution (e.g. 2048x1024) photor
 - Install PyTorch and dependencies from http://pytorch.org
 - Install python libraries [dominate](https://github.com/Knio/dominate) and requests.
 ```bash
-pip install dominate
-```
-```bash
-pip install requests
+pip install dominate requests
 ```
 - Clone this repo:
 ```bash
@@ -51,7 +48,7 @@ cd vid2vid
 
 
 ### Testing
-- An example Cityscapes video is included in the `datasets` folder.
+- We include an example Cityscapes video in the `datasets` folder.
 - To generate the first frame for the model, there are 3 different ways. 
   - The first is using the real image by specifying `--use_real_img`. 
   - The second is to use another model which was trained on single images (e.g. pix2pixHD) by specifying `--use_single_G`. 
@@ -157,4 +154,4 @@ If you find this useful for your research, please use the following.
 ```
 
 ## Acknowledgments
-This code borrows heavily from [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix).
+This code borrows heavily from [pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix) and [pix2pixHD]().
