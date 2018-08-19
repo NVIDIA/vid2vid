@@ -3,7 +3,9 @@
 <br><br><br><br>
 
 # vid2vid
-### [[Project]](https://tcwang0509.github.io/vid2vid/) [[YouTube]](https://youtu.be/S1OwOd-war8) Paper (Coming on Aug 20)<br>
+### [[Project]](https://tcwang0509.github.io/vid2vid/) [[YouTube]](https://youtu.be/S1OwOd-war8)<br>
+Paper will appear on Arxiv on Aug 20. 
+
 Pytorch implementation of our method for high-resolution (e.g., 2048x1024) photorealistic video-to-video translation. It can be used for turning semantic label maps into photo-realistic videos, synthesizing people talking from edge maps, or generating human bodies from poses. <br><br>
 [Video-to-Video Synthesis](https://tcwang0509.github.io/vid2vid/)  
  [Ting-Chun Wang](https://tcwang0509.github.io/)<sup>1</sup>, [Ming-Yu Liu](http://mingyuliu.net/)<sup>1</sup>, [Jun-Yan Zhu](http://people.csail.mit.edu/junyanz/)<sup>2</sup>, [Guilin Liu](https://liuguilin1225.github.io/)<sup>1</sup>, Andrew Tao<sup>1</sup>, [Jan Kautz](http://jankautz.com/)<sup>1</sup>, [Bryan Catanzaro](http://catanzaro.name/)<sup>1</sup>  
@@ -46,14 +48,8 @@ git clone https://github.com/NVIDIA/vid2vid
 cd vid2vid
 ```
 
-
 ### Testing
 - We include an example Cityscapes video in the `datasets` folder.
-- Three different ways to generate the first frame for the model: 
-  - The first is using the real image by specifying `--use_real_img`. 
-  - The second is to use another model which was trained on single images (e.g., pix2pixHD) by specifying `--use_single_G`. 
-  - The third is forcing the model to also synthesize the first frame by specifying `--no_first_img`. This must be trained separately before inference.
-  - Throughout the rest of the repo, we assume the second option is adopted. 
 - First, download and compile a snapshot of the FlowNet2 repo from https://github.com/NVIDIA/flownet2-pytorch by running `python scripts/download_flownet2.py`.
 - Please download the pre-trained Cityscapes model by:
   ```bash
@@ -78,7 +74,6 @@ cd vid2vid
   ```
 
 - You can find more example scripts in the `scripts` directory.
-
 
 ### Dataset
 - We use the Cityscapes dataset as an example. To train a model on the full dataset, please download it from the [official website](https://www.cityscapes-dataset.com/) (registration required).
