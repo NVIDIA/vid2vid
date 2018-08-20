@@ -37,7 +37,7 @@ Pytorch implementation of our method for high-resolution (e.g., 2048x1024) photo
 
 ## Getting Started
 ### Installation
-- Install PyTorch and dependencies from http://pytorch.org
+- Install PyTorch and its dependencies from http://pytorch.org
 - Install python libraries [dominate](https://github.com/Knio/dominate) and requests.
 ```bash
 pip install dominate requests
@@ -62,7 +62,7 @@ cd vid2vid
   ```
   The test results will be saved to a HTML file here: `./results/label2city_2048/test_latest/index.html`.
 
-- We also provide a smaller model trained with 1 GPU, which produces slightly worse performance at 1024 x 512 resolution.
+- We also provide a smaller model trained with single GPU, which produces slightly worse performance at 1024 x 512 resolution.
   - Please download the model by
   ```bash
   python scripts/download_models_g1.py
@@ -127,7 +127,7 @@ If only GPUs with 12G/16G memory are available, please use the script `./scripts
   - `max_frames_backpropagate`: the number of frames that loss backpropagates to previous frames. For example, if this number is 4, the loss on frame n will backpropagate to frame n-3. Increasing this number will slightly improve the performance, but also cause training to be less stable. The default is 1.
   - `n_frames_total`: the total number of frames in a sequence we want to train with. We gradually increase this number during training.
   - `niter_step`: for how many epochs do we double `n_frames_total`. The default is 5.  
-  - `niter_fix_global`: if this number if not 0, only train the finest spatial scale for this number of epochs before starting to finetune all scales.
+  - `niter_fix_global`: if this number if not 0, only train the finest spatial scale for this number of epochs before starting to fine-tune all scales.
   - `batchSize`: the number of sequences to train at a time. We normally set batchSize to 1 since often, one sequence is enough to occupy all GPUs. If you want to do batchSize > 1, currently only `batchSize == n_gpus_gen` is supported.
   - `no_first_img`: if not specified, the model will assume the first frame is given and synthesize the successive frames. If specified, the model will also try to synthesize the first frame instead.
   - `fg`: if specified, use the foreground-background separation model.
