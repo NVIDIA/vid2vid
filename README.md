@@ -3,13 +3,12 @@
 <br><br><br><br>
 
 # vid2vid
-### [[Project]](https://tcwang0509.github.io/vid2vid/) [[YouTube]](https://youtu.be/S1OwOd-war8)<br>
-Paper will appear on Arxiv on Aug 20. 
+### [Project](https://tcwang0509.github.io/vid2vid/) |  [YouTube](https://youtu.be/S1OwOd-war8) | [Paper](https://tcwang0509.github.io/vid2vid/paper_vid2vid.pdf)
 
 Pytorch implementation of our method for high-resolution (e.g., 2048x1024) photorealistic video-to-video translation. It can be used for turning semantic label maps into photo-realistic videos, synthesizing people talking from edge maps, or generating human bodies from poses. <br><br>
 [Video-to-Video Synthesis](https://tcwang0509.github.io/vid2vid/)  
  [Ting-Chun Wang](https://tcwang0509.github.io/)<sup>1</sup>, [Ming-Yu Liu](http://mingyuliu.net/)<sup>1</sup>, [Jun-Yan Zhu](http://people.csail.mit.edu/junyanz/)<sup>2</sup>, [Guilin Liu](https://liuguilin1225.github.io/)<sup>1</sup>, Andrew Tao<sup>1</sup>, [Jan Kautz](http://jankautz.com/)<sup>1</sup>, [Bryan Catanzaro](http://catanzaro.name/)<sup>1</sup>  
- <sup>1</sup>NVIDIA Corporation, <sup>2</sup>MIT CSAIL 
+ <sup>1</sup>NVIDIA Corporation, <sup>2</sup>MIT CSAIL
  In arXiv, 2018.  
 
 ## Video-to-Video Translation
@@ -34,6 +33,7 @@ Pytorch implementation of our method for high-resolution (e.g., 2048x1024) photo
 - Linux or macOS
 - Python 3
 - NVIDIA GPU + CUDA cuDNN
+
 
 ## Getting Started
 ### Installation
@@ -98,7 +98,7 @@ cd vid2vid
 - To view training results, please checkout intermediate results in `./checkpoints/label2city_1024/web/index.html`.
 If you have TensorFlow installed, you can see TensorBoard logs in `./checkpoints/label2city_1024/logs` by adding `--tf_log` to the training scripts.
 
-- Training with a single GPU: 
+- Training with a single GPU:
   - We trained our models using multiple GPUs. For convenience, we provide some sample training scripts (XXX_g1.sh) for single GPU users, up to 1024 x 512 resolution. Again a coarse-to-fine approach is adopted (256 x 128, 512 x 256, 1024 x 512). Performance is not guaranteed using these scripts.
   - For example, to train a 256 x 128 video with a single GPU (`bash ./scripts/train_256_g1.sh`)
   ```bash
@@ -128,11 +128,10 @@ If only GPUs with 12G/16G memory are available, please use the script `./scripts
   - `n_frames_total`: the total number of frames in a sequence we want to train with. We gradually increase this number during training.
   - `niter_step`: for how many epochs do we double `n_frames_total`. The default is 5.  
   - `niter_fix_global`: if this number if not 0, only train the finest spatial scale for this number of epochs before starting to finetune all scales.
-  - `batchSize`: the number of sequences to train at a time. We normally set batchSize to 1 since often, one sequence is enough to occupy all GPUs. If you want to do batchSize > 1, currently only `batchSize == n_gpus_gen` is supported. 
+  - `batchSize`: the number of sequences to train at a time. We normally set batchSize to 1 since often, one sequence is enough to occupy all GPUs. If you want to do batchSize > 1, currently only `batchSize == n_gpus_gen` is supported.
   - `no_first_img`: if not specified, the model will assume the first frame is given and synthesize the successive frames. If specified, the model will also try to synthesize the first frame instead.
   - `fg`: if specified, use the foreground-background separation model.
 - For other flags, please see `options/train_options.py` and `options/base_options.py` for all the training flags; see `options/test_options.py` and `options/base_options.py` for all the test flags.
-
 
 ## Citation
 
