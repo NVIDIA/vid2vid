@@ -37,7 +37,7 @@ Pytorch implementation of our method for high-resolution (e.g., 2048x1024) photo
 
 ## Getting Started
 ### Installation
-- Install PyTorch and dependencies from http://pytorch.org
+- Install PyTorch and dependencies from https://pytorch.org
 - Install python libraries [dominate](https://github.com/Knio/dominate) and requests.
 ```bash
 pip install dominate requests
