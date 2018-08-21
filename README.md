@@ -3,9 +3,9 @@
 <br><br><br><br>
 
 # vid2vid
-### [Project](https://tcwang0509.github.io/vid2vid/) |  [YouTube](https://youtu.be/S1OwOd-war8) | [Paper](https://tcwang0509.github.io/vid2vid/paper_vid2vid.pdf) | [ArXiv](https://arxiv.org/abs/1808.06601)
+### [Project](https://tcwang0509.github.io/vid2vid/) |  [YouTube](https://youtu.be/S1OwOd-war8) | [Paper](https://tcwang0509.github.io/vid2vid/paper_vid2vid.pdf) | [arXiv](https://arxiv.org/abs/1808.06601)
 
-Pytorch implementation of our method for high-resolution (e.g., 2048x1024) photorealistic video-to-video translation. It can be used for turning semantic label maps into photo-realistic videos, synthesizing people talking from edge maps, or generating human bodies from poses. <br><br>
+Pytorch implementation for high-resolution (e.g., 2048x1024) photorealistic video-to-video translation. It can be used for turning semantic label maps into photo-realistic videos, synthesizing people talking from edge maps, or generating human motions from poses. <br><br>
 [Video-to-Video Synthesis](https://tcwang0509.github.io/vid2vid/)  
  [Ting-Chun Wang](https://tcwang0509.github.io/)<sup>1</sup>, [Ming-Yu Liu](http://mingyuliu.net/)<sup>1</sup>, [Jun-Yan Zhu](http://people.csail.mit.edu/junyanz/)<sup>2</sup>, [Guilin Liu](https://liuguilin1225.github.io/)<sup>1</sup>, Andrew Tao<sup>1</sup>, [Jan Kautz](http://jankautz.com/)<sup>1</sup>, [Bryan Catanzaro](http://catanzaro.name/)<sup>1</sup>  
  <sup>1</sup>NVIDIA Corporation, <sup>2</sup>MIT CSAIL
@@ -78,7 +78,7 @@ cd vid2vid
 ### Dataset
 - We use the Cityscapes dataset as an example. To train a model on the full dataset, please download it from the [official website](https://www.cityscapes-dataset.com/) (registration required).
 - We apply a pre-trained segmentation algorithm to get the corresponding semantic maps (train_A) and instance maps (train_inst).
-- Please put the obtained images under the `datasets` folder in the same way the example images are provided.
+- Please add the obtained images to the `datasets` folder in the same way the example images are provided.
 
 
 ### Training
@@ -135,7 +135,7 @@ If only GPUs with 12G/16G memory are available, please use the script `./scripts
 
 ## Citation
 
-If you find this useful for your research, please use the following.
+If you find this useful for your research, please cite the following paper.
 
 ```
 @article{wang2018vid2vid,
