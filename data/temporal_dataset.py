@@ -64,7 +64,7 @@ class TemporalDataset(BaseDataset):
         transform_scaleA = get_transform(self.opt, params, method=Image.NEAREST, normalize=False) if self.A_is_label else transform_scaleB
 
         # read in images
-        inst = 0
+        A = B = inst = 0
         for i in range(n_frames_total):            
             A_path = A_paths[start_idx + i * t_step]
             B_path = B_paths[start_idx + i * t_step]            
