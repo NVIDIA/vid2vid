@@ -3,7 +3,7 @@
 <br><br><br><br>
 
 # vid2vid
-### [Project](https://tcwang0509.github.io/vid2vid/) |  [YouTube](https://youtu.be/S1OwOd-war8) | [Paper](https://tcwang0509.github.io/vid2vid/paper_vid2vid.pdf) | [arXiv](https://arxiv.org/abs/1808.06601)
+### [Project](https://tcwang0509.github.io/vid2vid/) |  [YouTube](https://youtu.be/GrP_aOSXt5U) | [Paper](https://tcwang0509.github.io/vid2vid/paper_vid2vid.pdf) | [arXiv](https://arxiv.org/abs/1808.06601)
 
 Pytorch implementation for high-resolution (e.g., 2048x1024) photorealistic video-to-video translation. It can be used for turning semantic label maps into photo-realistic videos, synthesizing people talking from edge maps, or generating human motions from poses. <br><br>
 [Video-to-Video Synthesis](https://tcwang0509.github.io/vid2vid/)  
@@ -116,6 +116,10 @@ If only GPUs with 12G/16G memory are available, please use the script `./scripts
 - The default setting for preprocessing is `scaleWidth`, which will scale the width of all training images to `opt.loadSize` (1024) while keeping the aspect ratio. If you want a different setting, please change it by using the `--resize_or_crop` option. For example, `scaleWidth_and_crop` first resizes the image to have width `opt.loadSize` and then does random cropping of size `(opt.fineSize, opt.fineSize)`. `crop` skips the resizing step and only performs random cropping. `scaledCrop` crops the image while retraining the original aspect ratio. If you don't want any preprocessing, please specify `none`, which will do nothing other than making sure the image is divisible by 32.
 
 ## More Training/Test Details
+- We generate frames in the video sequentially, where the generation of the current frame depends on previous frames. To generate the first frame for the model, there are 3 different ways:  
+  - 1. Using another generator which was trained on generating single images (e.g., pix2pixHD) by specifying `--use_single_G`. This is the option we use in the test scripts.
+  - 2. Using the first frame in the real sequence by specifying `--use_real_img`. 
+  - 3. Forcing the model to also synthesize the first frame by specifying `--no_first_img`. This must be trained separately before inference.
 - The way we train the model is as follows: suppose we have 8 GPUs, 4 for generators and 4 for discriminators, and we want to train 28 frames. Also, assume each GPU can generate only one frame. The first GPU generates the first frame, and pass it to the next GPU, and so on. After the 4 frames are generated, they are passed to the 4 discriminator GPUs to compute the losses. Then the last generated frame becomes input to the next batch, and the next 4 frames in the training sequence are loaded into GPUs. This is repeated 7 times (4 x 7 = 28), to train all the 28 frames.
 - Some important flags:
   - `n_gpus_gen`: the number of GPUs to use for generators (while the others are used for discriminators). We separate generators and discriminators into different GPUs since when dealing with high resolutions, even one frame cannot fit in a GPU. If the number is set to `-1`, there is no separation and all GPUs are used for both generators and discriminators (only works for low-res images).
@@ -130,7 +134,7 @@ If only GPUs with 12G/16G memory are available, please use the script `./scripts
   - `niter_fix_global`: if this number if not 0, only train the finest spatial scale for this number of epochs before starting to fine-tune all scales.
   - `batchSize`: the number of sequences to train at a time. We normally set batchSize to 1 since often, one sequence is enough to occupy all GPUs. If you want to do batchSize > 1, currently only `batchSize == n_gpus_gen` is supported.
   - `no_first_img`: if not specified, the model will assume the first frame is given and synthesize the successive frames. If specified, the model will also try to synthesize the first frame instead.
-  - `fg`: if specified, use the foreground-background separation model.
+  - `fg`: if specified, use the foreground-background separation model as stated in the paper. The foreground labels must be specified by `--fg_labels`.
 - For other flags, please see `options/train_options.py` and `options/base_options.py` for all the training flags; see `options/test_options.py` and `options/base_options.py` for all the test flags.
 
 ## Citation
