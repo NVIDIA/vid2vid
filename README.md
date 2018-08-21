@@ -37,7 +37,7 @@ Pytorch implementation for high-resolution (e.g., 2048x1024) photorealistic vide
 
 ## Getting Started
 ### Installation
-- Install PyTorch and its dependencies from http://pytorch.org
+- Install PyTorch and its dependencies from https://pytorch.org
 - Install python libraries [dominate](https://github.com/Knio/dominate) and requests.
 ```bash
 pip install dominate requests
