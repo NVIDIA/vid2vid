@@ -33,11 +33,11 @@ Pytorch implementation for high-resolution (e.g., 2048x1024) photorealistic vide
 - Linux or macOS
 - Python 3
 - NVIDIA GPU + CUDA cuDNN
+- PyTorch 0.4.0
 
 
 ## Getting Started
 ### Installation
-- Install PyTorch and its dependencies from https://pytorch.org
 - Install python libraries [dominate](https://github.com/Knio/dominate) and requests.
 ```bash
 pip install dominate requests
@@ -50,7 +50,7 @@ cd vid2vid
 
 ### Testing
 - We include an example Cityscapes video in the `datasets` folder.
-- First, download and compile a snapshot of the FlowNet2 repo from https://github.com/NVIDIA/flownet2-pytorch by running `python scripts/download_flownet2.py`.
+- First, download and compile a snapshot of [FlowNet2](https://github.com/NVIDIA/flownet2-pytorch) by running `python scripts/download_flownet2.py`.
 - Please download the pre-trained Cityscapes model by:
   ```bash
   python scripts/download_models.py
@@ -58,7 +58,7 @@ cd vid2vid
 - To test the model (`bash ./scripts/test_2048.sh`):
   ```bash
   #!./scripts/test_2048.sh
-  python test.py --name label2city_2048 --loadSize 2048 --n_scales_spatial 3 --use_instance --fg --use_single_G
+  python test.py --name label2city_2048 --dataroot datasets/Cityscapes/test_A --loadSize 2048 --n_scales_spatial 3 --use_instance --fg --use_single_G
   ```
   The test results will be saved to a HTML file here: `./results/label2city_2048/test_latest/index.html`.
 
@@ -70,7 +70,7 @@ cd vid2vid
   - To test the model (`bash ./scripts/test_1024_g1.sh`):
   ```bash
   #!./scripts/test_1024_g1.sh
-  python test.py --name label2city_1024_g1 --loadSize 1024 --n_scales_spatial 3 --use_instance --fg --n_downsample_G 2 --use_single_G
+  python test.py --name label2city_1024_g1 --dataroot datasets/Cityscapes/test_A --loadSize 1024 --n_scales_spatial 3 --use_instance --fg --n_downsample_G 2 --use_single_G
   ```
 
 - You can find more example scripts in the `scripts` directory.
