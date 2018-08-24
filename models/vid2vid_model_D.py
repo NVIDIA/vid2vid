@@ -9,6 +9,7 @@ from torch.autograd import Variable
 import util.util as util
 from .base_model import BaseModel
 from . import networks
+from .flownet2_pytorch.networks.resample2d_package.resample2d import Resample2d
 
 class Vid2VidModelD(BaseModel):
     def name(self):
@@ -42,7 +43,6 @@ class Vid2VidModelD(BaseModel):
                     opt.num_D, not opt.no_ganFeat, gpu_ids=self.gpu_ids))
 
         # flownet 2        
-        from .flownet2_pytorch.networks.resample2d_package.modules.resample2d import Resample2d        
         self.resample = Resample2d()           
 
         print('---------- Networks initialized -------------') 
