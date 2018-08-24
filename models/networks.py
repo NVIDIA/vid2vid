@@ -9,6 +9,8 @@ import numpy as np
 import torch.nn.functional as F
 import copy
 
+from .flownet2_pytorch.networks.resample2d_package.resample2d import Resample2d
+
 ###############################################################################
 # Functions
 ###############################################################################
@@ -79,8 +81,7 @@ class CompositeGenerator(nn.Module):
     def __init__(self, input_nc, output_nc, prev_output_nc, ngf, n_downsampling, n_blocks, use_fg_model=False,
                 norm_layer=nn.BatchNorm2d, padding_type='reflect'):
         assert(n_blocks >= 0)
-        super(CompositeGenerator, self).__init__()                                        
-        from .flownet2_pytorch.networks.resample2d_package.modules.resample2d import Resample2d            
+        super(CompositeGenerator, self).__init__()        
         self.resample = Resample2d()
         self.n_downsampling = n_downsampling
         self.use_fg_model = use_fg_model
@@ -188,8 +189,7 @@ class CompositeGenerator(nn.Module):
 class CompositeLocalGenerator(nn.Module):
     def __init__(self, input_nc, output_nc, prev_output_nc, ngf, n_downsampling, n_blocks_local, use_fg_model=False,
                  norm_layer=nn.BatchNorm2d, padding_type='reflect', scale=1):        
-        super(CompositeLocalGenerator, self).__init__()                        
-        from .flownet2_pytorch.networks.resample2d_package.modules.resample2d import Resample2d        
+        super(CompositeLocalGenerator, self).__init__()        
         self.resample = Resample2d()        
         self.use_fg_model = use_fg_model
         self.scale = scale    

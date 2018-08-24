@@ -33,7 +33,7 @@ Pytorch implementation for high-resolution (e.g., 2048x1024) photorealistic vide
 - Linux or macOS
 - Python 3
 - NVIDIA GPU + CUDA cuDNN
-- PyTorch 0.4.0
+- PyTorch 0.4
 
 
 ## Getting Started
