@@ -1,5 +1,6 @@
 debug*
 checkpoints/
+datasets/
 models/flownet2*
 results/
 build/
