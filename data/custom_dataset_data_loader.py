@@ -10,6 +10,9 @@ def CreateDataset(opt):
     elif opt.dataset_mode == 'face':
         from data.face_dataset import FaceDataset
         dataset = FaceDataset() 
+    elif opt.dataset_mode == 'pose':
+        from data.pose_dataset import PoseDataset
+        dataset = PoseDataset() 
     elif opt.dataset_mode == 'test':
         from data.test_dataset import TestDataset
         dataset = TestDataset()

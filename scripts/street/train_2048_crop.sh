@@ -1,5 +1,5 @@
 python train.py --name label2city_2048_crop \
---loadSize 2048 --fineSize 1024 --resize_or_crop crop \
+--label_nc 35 --loadSize 2048 --fineSize 1024 --resize_or_crop crop \
 --n_scales_spatial 3 --num_D 4 --use_instance --fg \
 --gpu_ids 0,1,2,3,4,5,6,7 --n_gpus_gen 4 \
 --n_frames_total 4 --niter_step 1 \

@@ -13,7 +13,8 @@ import os.path
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG', '.pgm', '.PGM',
-    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP', '.tiff', '.txt'
+    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP', '.tiff', 
+    '.txt', '.json'
 ]
 
 
@@ -45,6 +46,11 @@ def make_grouped_dataset(dir):
         if len(paths) > 0:
             images.append(paths)
     return images
+
+def check_path_valid(A_paths, B_paths):
+    assert(len(A_paths) == len(B_paths))
+    for a, b in zip(A_paths, B_paths):
+        assert(len(a) == len(b))
 
 def default_loader(path):
     return Image.open(path).convert('RGB')
