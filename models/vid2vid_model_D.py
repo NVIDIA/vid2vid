@@ -216,7 +216,7 @@ class Vid2VidModelD(BaseModel):
     def get_face_region(self, real_A):
         _, _, h, w = real_A.size()
         if not self.opt.openpose_only:
-            face = (real_A[:,2] > 0.9).nonzero()
+            face = (real_A[:,2] > 0.95).nonzero()
         else:            
             face = (((real_A[:,0] == 0.6) | (real_A[:,0] == 0.2)) & (real_A[:,1] == 0) & (real_A[:,2] == 0.6)).nonzero()
         if face.size()[0]:
