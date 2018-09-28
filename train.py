@@ -7,6 +7,8 @@ import torch
 from torch.autograd import Variable
 from collections import OrderedDict
 from subprocess import call
+import fractions
+def lcm(a,b): return abs(a * b)/fractions.gcd(a,b) if a and b else 0
 
 from options.train_options import TrainOptions
 from data.data_loader import CreateDataLoader
@@ -25,7 +27,10 @@ def train():
     data_loader = CreateDataLoader(opt)
     dataset = data_loader.load_data()
     dataset_size = len(data_loader)
-    print('#training videos = %d' % dataset_size)
+    if opt.dataset_mode == 'pose':
+        print('#training frames = %d' % dataset_size)
+    else:
+        print('#training videos = %d' % dataset_size)
 
     ### initialize models
     modelG, modelD, flowNet = create_model(opt)
@@ -50,9 +55,8 @@ def train():
     else:    
         start_epoch, epoch_iter = 1, 0
 
-    ### set parameters
-    bs = opt.batchSize
-    n_gpus = opt.n_gpus_gen // bs             # number of gpus used for generator for each batch
+    ### set parameters    
+    n_gpus = opt.n_gpus_gen // opt.batchSize             # number of gpus used for generator for each batch
     tG, tD = opt.n_frames_G, opt.n_frames_D
     tDB = tD * opt.output_nc        
     s_scales = opt.n_scales_spatial
@@ -60,6 +64,7 @@ def train():
     input_nc = 1 if opt.label_nc != 0 else opt.input_nc
     output_nc = opt.output_nc     
 
+    opt.print_freq = lcm(opt.print_freq, opt.batchSize)
     total_steps = (start_epoch-1) * dataset_size + epoch_iter
     total_steps = total_steps // opt.print_freq * opt.print_freq  
 
@@ -89,8 +94,8 @@ def train():
             for i in range(0, n_frames_total-t_len+1, n_frames_load):
                 # 5D tensor: batchSize, # of frames, # of channels, height, width
                 input_A = Variable(data['A'][:, i*input_nc:(i+t_len)*input_nc, ...]).view(-1, t_len, input_nc, height, width)
-                input_B = Variable(data['B'][:, i*output_nc:(i+t_len)*output_nc, ...]).view(-1, t_len, output_nc, height, width)
-                inst_A = Variable(data['inst'][:, i:i+t_len, ...]).view(-1, t_len, 1, height, width) if opt.use_instance else None
+                input_B = Variable(data['B'][:, i*output_nc:(i+t_len)*output_nc, ...]).view(-1, t_len, output_nc, height, width)                
+                inst_A = Variable(data['inst'][:, i:i+t_len, ...]).view(-1, t_len, 1, height, width) if len(data['inst'].size()) > 2 else None
 
                 ###################################### Forward Pass ##########################
                 ####### generator                  
@@ -131,6 +136,9 @@ def train():
                 loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) * 0.5
                 loss_G = loss_dict['G_GAN'] + loss_dict['G_GAN_Feat'] + loss_dict['G_VGG']
                 loss_G += loss_dict['G_Warp'] + loss_dict['F_Flow'] + loss_dict['F_Warp'] + loss_dict['W']
+                if opt.add_face_disc:
+                    loss_G += loss_dict['G_f_GAN'] + loss_dict['G_f_GAN_Feat'] 
+                    loss_D += (loss_dict['D_f_fake'] + loss_dict['D_f_real']) * 0.5
                       
                 # collect temporal losses
                 loss_D_T = []           
@@ -165,7 +173,7 @@ def train():
             ############## Display results and errors ##########
             ### print out errors
             if total_steps % opt.print_freq == 0:
-                t = (time.time() - iter_start_time) / opt.print_freq / opt.batchSize
+                t = (time.time() - iter_start_time) / opt.print_freq
                 errors = {k: v.data.item() if not isinstance(v, int) else v for k, v in loss_dict.items()}
                 for s in range(len(loss_dict_T)):
                     errors.update({k+str(s): v.data.item() if not isinstance(v, int) else v for k, v in loss_dict_T[s].items()})            
@@ -173,24 +181,36 @@ def train():
                 visualizer.plot_current_errors(errors, total_steps)
 
             ### display output images
-            if save_fake:            
+            if save_fake:                
                 if opt.label_nc != 0:
                     input_image = util.tensor2label(real_A[0, -1], opt.label_nc)
+                elif opt.dataset_mode == 'pose':
+                    input_image = util.tensor2im(real_A[0, -1, :3], normalize=False)                    
+                    if real_A.size()[2] == 6:
+                        input_image2 = util.tensor2im(real_A[0, -1, 3:], normalize=False)
+                        input_image[input_image2 != 0] = input_image2[input_image2 != 0]
                 else:
-                    input_image = util.tensor2im(real_A[0, -1, :3], normalize=False)
+                    c = 3 if opt.input_nc == 3 else 1
+                    input_image = util.tensor2im(real_A[0, -1, :c], normalize=False)
                 if opt.use_instance:
-                    edges = util.tensor2im(real_A[0, -1, -1:,...], normalize=False)                
-                    input_image += edges[:,:,np.newaxis] 
+                    edges = util.tensor2im(real_A[0, -1, -1:,...], normalize=False)
+                    input_image += edges[:,:,np.newaxis]
+                
+                if opt.add_face_disc:
+                    ys, ye, xs, xe = modelD.module.get_face_region(real_A[0, -1:])
+                    if ys is not None:
+                        input_image[ys, xs:xe, :] = input_image[ye, xs:xe, :] = input_image[ys:ye, xs, :] = input_image[ys:ye, xe, :] = 255 
 
                 visual_list = [('input_image', input_image),
                                ('fake_image', util.tensor2im(fake_B[0, -1])),
                                ('fake_first_image', util.tensor2im(fake_B_first)),
                                ('fake_raw_image', util.tensor2im(fake_B_raw[0, -1])),
-                               ('real_image', util.tensor2im(real_B[0, -1])),                           
-                               ('flow', util.tensor2flow(flow[0, -1])),
+                               ('real_image', util.tensor2im(real_B[0, -1])),                                                          
                                ('flow_ref', util.tensor2flow(flow_ref[0, -1])),
-                               ('conf_ref', util.tensor2im(conf_ref[0, -1], normalize=False)),
-                               ('weight', util.tensor2im(weight[0, -1], normalize=False))]                
+                               ('conf_ref', util.tensor2im(conf_ref[0, -1], normalize=False))]
+                if flow is not None:
+                    visual_list += [('flow', util.tensor2flow(flow[0, -1])),
+                                    ('weight', util.tensor2im(weight[0, -1], normalize=False))]
                 visuals = OrderedDict(visual_list)                          
                 visualizer.display_current_results(visuals, epoch, total_steps)
 
@@ -227,7 +247,7 @@ def train():
         ### gradually grow training sequence length
         if (epoch % opt.niter_step) == 0:
             data_loader.dataset.update_training_batch(epoch//opt.niter_step)
-            modelG.module.update_training_batch(epoch//opt.niter_step)   
+            modelG.module.update_training_batch(epoch//opt.niter_step)
 
         ### finetune all scales
         if (opt.n_scales_spatial > 1) and (opt.niter_fix_global != 0) and (epoch == opt.niter_fix_global):
@@ -236,8 +256,10 @@ def train():
 def reshape(tensors):
     if isinstance(tensors, list):
         return [reshape(tensor) for tensor in tensors]
+    if tensors is None:
+        return None
     _, _, ch, h, w = tensors.size()
-    return tensors.view(-1, ch, h, w)
+    return tensors.contiguous().view(-1, ch, h, w)
 
 # get temporally subsampled frames for real/fake sequences
 def get_skipped_frames(B_all, B, t_scales, tD):

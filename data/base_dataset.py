@@ -1,4 +1,5 @@
 import torch.utils.data as data
+import torch
 from PIL import Image
 import torchvision.transforms as transforms
 import numpy as np
@@ -14,45 +15,105 @@ class BaseDataset(data.Dataset):
     def initialize(self, opt):
         pass
 
-def get_params(opt, size):
-    w, h = size
-    new_h = h
-    new_w = w
-    if 'resize' in opt.resize_or_crop:
-        new_h = new_w = opt.loadSize            
-    elif 'scaleWidth' in opt.resize_or_crop:
-        new_w = opt.loadSize
-        new_h = opt.loadSize * h / w
+    def update_training_batch(self, ratio): # update the training sequence length to be longer      
+        seq_len_max = min(128, self.seq_len_max) - (self.opt.n_frames_G - 1)
+        if self.n_frames_total < seq_len_max:
+            self.n_frames_total = min(seq_len_max, self.opt.n_frames_total * (2**ratio))
+            #self.n_frames_total = min(seq_len_max, self.opt.n_frames_total * (ratio + 1))
+            print('--------- Updating training sequence length to %d ---------' % self.n_frames_total)
 
-    if 'crop' in opt.resize_or_crop:
-        x = random.randint(0, np.maximum(0, new_w - opt.fineSize))
-        y = random.randint(0, np.maximum(0, new_h - opt.fineSize))
-    elif 'scaledCrop' in opt.resize_or_crop:
-        x = random.randint(0, np.maximum(0, new_w - opt.fineSize))
-        y = random.randint(0, np.maximum(0, new_h - opt.fineSize*new_h//new_w))
+    def init_frame_idx(self, A_paths):
+        self.n_of_seqs = len(A_paths)                         # number of sequences to train
+        self.seq_len_max = max([len(A) for A in A_paths])     # max number of frames in the training sequences
+
+        self.seq_idx = 0                                                      # index for current sequence
+        self.frame_idx = self.opt.start_frame if not self.opt.isTrain else 0  # index for current frame in the sequence
+        self.frames_count = []                                                # number of frames in each sequence
+        for path in A_paths:
+            self.frames_count.append(len(path) - self.opt.n_frames_G + 1)
+
+        self.folder_prob = [count / sum(self.frames_count) for count in self.frames_count]
+        self.n_frames_total = self.opt.n_frames_total if self.opt.isTrain else 1 
+        self.A, self.B, self.I = None, None, None
+
+    def update_frame_idx(self, A_paths, index):
+        if self.opt.isTrain:
+            if self.opt.dataset_mode == 'pose':                
+                seq_idx = np.random.choice(len(A_paths), p=self.folder_prob) # randomly pick sequence to train
+                self.frame_idx = index
+            else:    
+                seq_idx = index % self.n_of_seqs            
+            return None, None, None, seq_idx
+        else:
+            self.change_seq = self.frame_idx >= self.frames_count[self.seq_idx]
+            if self.change_seq:
+                self.seq_idx += 1
+                self.frame_idx = 0
+                self.A, self.B, self.I = None, None, None
+            return self.A, self.B, self.I, self.seq_idx
+
+def make_power_2(n, base=32.0):    
+    return int(round(n / base) * base)
+
+def get_img_params(opt, size):
+    w, h = size
+    new_h, new_w = h, w        
+    if 'resize' in opt.resize_or_crop:   # resize image to be loadSize x loadSize
+        new_h = new_w = opt.loadSize            
+    elif 'scaleWidth' in opt.resize_or_crop: # scale image width to be loadSize
+        new_w = opt.loadSize
+        new_h = opt.loadSize * h // w
+    elif 'scaleHeight' in opt.resize_or_crop: # scale image height to be loadSize
+        new_h = opt.loadSize
+        new_w = opt.loadSize * w // h
+    elif 'randomScaleWidth' in opt.resize_or_crop:  # randomly scale image width to be somewhere between loadSize and fineSize
+        new_w = random.randint(opt.fineSize, opt.loadSize + 1)
+        new_h = new_w * h // w
+    elif 'randomScaleHeight' in opt.resize_or_crop: # randomly scale image height to be somewhere between loadSize and fineSize
+        new_h = random.randint(opt.fineSize, opt.loadSize + 1)
+        new_w = new_h * w // h
+    new_w = int(round(new_w / 4)) * 4
+    new_h = int(round(new_h / 4)) * 4    
+
+    crop_x = crop_y = 0
+    crop_w = crop_h = 0
+    if 'crop' in opt.resize_or_crop or 'scaledCrop' in opt.resize_or_crop:
+        if 'crop' in opt.resize_or_crop:      # crop patches of size fineSize x fineSize
+            crop_w = crop_h = opt.fineSize
+        else:
+            if 'Width' in opt.resize_or_crop: # crop patches of width fineSize
+                crop_w = opt.fineSize
+                crop_h = opt.fineSize * h // w
+            else:                              # crop patches of height fineSize
+                crop_h = opt.fineSize
+                crop_w = opt.fineSize * w // h
+
+        crop_w, crop_h = make_power_2(crop_w), make_power_2(crop_h)        
+        x_span = (new_w - crop_w) // 2
+        crop_x = np.maximum(0, np.minimum(x_span*2, int(np.random.randn() * x_span/3 + x_span)))        
+        crop_y = random.randint(0, np.minimum(np.maximum(0, new_h - crop_h), new_h // 8))
+        #crop_x = random.randint(0, np.maximum(0, new_w - crop_w))
+        #crop_y = random.randint(0, np.maximum(0, new_h - crop_h))        
     else:
-        x = y = 0
-    
-    flip = random.random() > 0.5
-    return {'crop_pos': (x,y), 'flip': flip}
+        new_w, new_h = make_power_2(new_w), make_power_2(new_h)
+
+    flip = random.random() > 0.5    
+    return {'new_size': (new_w, new_h), 'crop_size': (crop_w, crop_h), 'crop_pos': (crop_x, crop_y), 'flip': flip}
 
 def get_transform(opt, params, method=Image.BICUBIC, normalize=True, toTensor=True):
     transform_list = []
+    ### resize input image
     if 'resize' in opt.resize_or_crop:
         osize = [opt.loadSize, opt.loadSize]
         transform_list.append(transforms.Scale(osize, method))   
-    elif 'scaleWidth' in opt.resize_or_crop:
-        transform_list.append(transforms.Lambda(lambda img: __scale_image(img, opt.loadSize, method)))
+    else:
+        transform_list.append(transforms.Lambda(lambda img: __scale_image(img, params['new_size'], method)))
         
-    if 'crop' in opt.resize_or_crop:
-        transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_pos'], opt.fineSize)))
-    elif 'scaledCrop' in opt.resize_or_crop:        
-        transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_pos'], opt.fineSize, False)))
-        
-    elif opt.resize_or_crop == 'none':
-        base = 32        
-        transform_list.append(transforms.Lambda(lambda img: __make_power_2(img, base, method)))    
+    ### crop patches from image
+    if 'crop' in opt.resize_or_crop or 'scaledCrop' in opt.resize_or_crop:
+        transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_size'], params['crop_pos'])))    
 
+    ### random flip
     if opt.isTrain and not opt.no_flip:
         transform_list.append(transforms.Lambda(lambda img: __flip(img, params['flip'])))
 
@@ -69,51 +130,56 @@ def toTensor_normalize():
                                             (0.5, 0.5, 0.5))]
     return transforms.Compose(transform_list)
 
-def __scale_image(img, target_width, method=Image.BICUBIC):
-    ow, oh = img.size
-    if ow > oh:
-        w = target_width
-        h = int(target_width * oh / ow)        
-    else:
-        h = target_width
-        w = int(target_width * ow / oh)
-    base = 32.0
-    h = int(round(h / base) * base)
-    w = int(round(w / base) * base)
+def __scale_image(img, size, method=Image.BICUBIC):
+    w, h = size    
     return img.resize((w, h), method)
 
-def __make_power_2(img, base, method=Image.BICUBIC):
-    ow, oh = img.size        
-    h = int(round(oh / base) * base)
-    w = int(round(ow / base) * base)
-    if (h == oh) and (w == ow):
-        return img
-    return img.resize((w, h), method)
-
-def __scale_width(img, target_width, method=Image.BICUBIC):
+def __crop(img, size, pos):
     ow, oh = img.size
-    if (ow == target_width):
-        return img    
-    w = target_width
-    h = int(target_width * oh / ow)    
-    base = 32.0
-    h = int(round(h / base) * base)
-    w = int(round(w / base) * base)
-    return img.resize((w, h), method)
-
-
-def __crop(img, pos, size, square=True):
-    ow, oh = img.size
-    x1, y1 = pos
-    tw = th = size
-    if not square:
-        th = th * oh // ow    
+    tw, th = size
+    x1, y1 = pos        
     if (ow > tw or oh > th):        
         return img.crop((x1, y1, min(ow, x1 + tw), min(oh, y1 + th)))
     return img
-
 
 def __flip(img, flip):
     if flip:
         return img.transpose(Image.FLIP_LEFT_RIGHT)
     return img
+
+def get_video_params(opt, n_frames_total, cur_seq_len, index):
+    tG = opt.n_frames_G
+    if opt.isTrain:        
+        n_frames_total = min(n_frames_total, cur_seq_len - tG + 1)
+
+        n_gpus = opt.n_gpus_gen // opt.batchSize                   # number of generator GPUs for each batch
+        n_frames_per_load = opt.max_frames_per_gpu * n_gpus        # number of frames to load into GPUs at one time (for each batch)
+        n_frames_per_load = min(n_frames_total, n_frames_per_load)
+        n_loadings = n_frames_total // n_frames_per_load           # how many times are needed to load entire sequence into GPUs         
+        n_frames_total = n_frames_per_load * n_loadings + tG - 1   # rounded overall number of frames to read from the sequence
+        
+        max_t_step = min(opt.max_t_step, (cur_seq_len-1) // (n_frames_total-1))
+        t_step = np.random.randint(max_t_step) + 1                    # spacing between neighboring sampled frames
+        offset_max = max(1, cur_seq_len - (n_frames_total-1)*t_step)  # maximum possible index for the first frame        
+        if opt.dataset_mode == 'pose':
+            start_idx = index % offset_max
+        else:
+            start_idx = np.random.randint(offset_max)                 # offset for the first frame to load
+        if opt.debug:
+            print("loading %d frames in total, first frame starting at index %d, space between neighboring frames is %d"
+                % (n_frames_total, start_idx, t_step))
+    else:
+        n_frames_total = tG
+        start_idx = index
+        t_step = 1   
+    return n_frames_total, start_idx, t_step
+
+def concat_frame(A, Ai, nF):
+    if A is None:
+        A = Ai
+    else:
+        c = Ai.size()[0]
+        if A.size()[0] == nF * c:
+            A = A[c:]
+        A = torch.cat([A, Ai])
+    return A

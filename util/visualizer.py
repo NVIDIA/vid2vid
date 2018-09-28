@@ -2,7 +2,6 @@
 ### Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
 import numpy as np
 import os
-import ntpath
 import time
 from . import util
 from . import html
@@ -112,15 +111,16 @@ class Visualizer():
             log_file.write('%s\n' % message)
 
     # save image to the disk
-    def save_images(self, webpage, visuals, image_path):
-        image_dir = webpage.get_image_dir()
-        short_path = ntpath.basename(image_path[0])
-        name = os.path.splitext(short_path)[0]
+    def save_images(self, image_dir, visuals, image_path, webpage=None):        
+        dirname = os.path.basename(os.path.dirname(image_path[0]))
+        image_dir = os.path.join(image_dir, dirname)
+        util.mkdir(image_dir)
+        name = os.path.basename(image_path[0])
+        name = os.path.splitext(name)[0]        
 
-        webpage.add_header(name)
-        ims = []
-        txts = []
-        links = []
+        if webpage is not None:
+            webpage.add_header(name)
+            ims, txts, links = [], [], []         
 
         for label, image_numpy in visuals.items():
             save_ext = 'png' if 'real_A' in label and self.opt.label_nc != 0 else 'jpg'
@@ -128,10 +128,12 @@ class Visualizer():
             save_path = os.path.join(image_dir, image_name)
             util.save_image(image_numpy, save_path)
 
-            ims.append(image_name)
-            txts.append(label)
-            links.append(image_name)
-        webpage.add_images(ims, txts, links, width=self.win_size)
+            if webpage is not None:
+                ims.append(image_name)
+                txts.append(label)
+                links.append(image_name)
+        if webpage is not None:
+            webpage.add_images(ims, txts, links, width=self.win_size)
 
     def vis_print(self, message):
         print(message)

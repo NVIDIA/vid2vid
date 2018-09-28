@@ -14,7 +14,7 @@ class BaseOptions():
         self.parser.add_argument('--loadSize', type=int, default=512, help='scale images to this size')
         self.parser.add_argument('--fineSize', type=int, default=512, help='then crop to this size')
         self.parser.add_argument('--input_nc', type=int, default=3, help='# of input image channels')
-        self.parser.add_argument('--label_nc', type=int, default=35, help='number of labels')        
+        self.parser.add_argument('--label_nc', type=int, default=0, help='number of labels')        
         self.parser.add_argument('--output_nc', type=int, default=3, help='# of output image channels')        
 
         # network arch
@@ -38,7 +38,7 @@ class BaseOptions():
         self.parser.add_argument('--tf_log', action='store_true', help='if specified, use tensorboard logging. Requires tensorflow installed')
                         
         self.parser.add_argument('--max_dataset_size', type=int, default=float("inf"), help='Maximum number of samples allowed per dataset. If the dataset directory contains more than max_dataset_size, only a subset is loaded.')
-        self.parser.add_argument('--resize_or_crop', type=str, default='scaleWidth', help='scaling and cropping of images at load time [resize_and_crop|crop|scaledCrop|scaleWidth|scaleWidth_and_crop|scaleWidth_and_scaledCrop] etc')
+        self.parser.add_argument('--resize_or_crop', type=str, default='scaleWidth', help='scaling and cropping of images at load time [resize_and_crop|crop|scaledCrop|scaleWidth|scaleWidth_and_crop|scaleWidth_and_scaledCrop|scaleHeight|scaleHeight_and_crop] etc')
         self.parser.add_argument('--no_flip', action='store_true', help='if specified, do not flip the images for data argumentation')                    
     
         # more features as input        
@@ -61,6 +61,18 @@ class BaseOptions():
         self.parser.add_argument('--use_single_G', action='store_true', help='if specified, use single frame generator for the first frame')
         self.parser.add_argument('--fg', action='store_true', help='if specified, use foreground-background seperation model')
         self.parser.add_argument('--fg_labels', type=str, default='26', help='label indices for foreground objects')
+        self.parser.add_argument('--no_flow', action='store_true', help='if specified, do not use flow warping and directly synthesize frames')
+
+        # face specific
+        self.parser.add_argument('--no_canny_edge', action='store_true', help='do *not* use canny edge as input')
+        self.parser.add_argument('--no_dist_map', action='store_true', help='do *not* use distance transform map as input')
+
+        # pose specific
+        self.parser.add_argument('--densepose_only', action='store_true', help='use only densepose as input')
+        self.parser.add_argument('--openpose_only', action='store_true', help='use only openpose as input') 
+        self.parser.add_argument('--add_face_disc', action='store_true', help='add face discriminator') 
+        self.parser.add_argument('--remove_face_labels', action='store_true', help='remove face labels to better adapt to different face shapes')
+        self.parser.add_argument('--random_drop_prob', type=float, default=0.2, help='the probability to randomly drop each pose segment during training')
         
         # miscellaneous                
         self.parser.add_argument('--load_pretrain', type=str, default='', help='if specified, load the pretrained model')                

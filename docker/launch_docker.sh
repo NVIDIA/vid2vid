@@ -1,3 +1,4 @@
+# Thanks @dustinfreeman for providing the script
 #!/bin/bash
 sudo nvidia-docker build -t vid2vid:CUDA8-py35 .
 

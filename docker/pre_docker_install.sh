@@ -1,4 +1,4 @@
-
+#Thanks @dustinfreeman for providing the script
 
 #Install docker-ce https://docs.docker.com/install/linux/docker-ce/ubuntu/#set-up-the-repository
 sudo apt-get install -y \
