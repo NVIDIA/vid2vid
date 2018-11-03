@@ -88,6 +88,8 @@ def train():
 
             fake_B_last = None  # the last generated frame from previous training batch (which becomes input to the next batch)
             real_B_all, fake_B_all, flow_ref_all, conf_ref_all = None, None, None, None # all real/generated frames so far
+            if opt.sparse_D:
+                real_B_all, fake_B_all, flow_ref_all, conf_ref_all = [None]*t_scales, [None]*t_scales, [None]*t_scales, [None]*t_scales
             real_B_skipped, fake_B_skipped = [None]*t_scales, [None]*t_scales           # temporally subsampled frames
             flow_ref_skipped, conf_ref_skipped = [None]*t_scales, [None]*t_scales       # temporally subsampled flows
 
@@ -119,15 +121,21 @@ def train():
                 ### temporal discriminator
                 loss_dict_T = []
                 # get skipped frames for each temporal scale
-                if t_scales > 0:                
-                    real_B_all, real_B_skipped = get_skipped_frames(real_B_all, real_B, t_scales, tD)
-                    fake_B_all, fake_B_skipped = get_skipped_frames(fake_B_all, fake_B, t_scales, tD)                
-                    flow_ref_all, conf_ref_all, flow_ref_skipped, conf_ref_skipped = get_skipped_flows(flowNet, 
-                        flow_ref_all, conf_ref_all, real_B_skipped, flow_ref, conf_ref, t_scales, tD)
+                if t_scales > 0:
+                    if opt.sparse_D:          
+                        real_B_all, real_B_skipped = get_skipped_frames_sparse(real_B_all, real_B, t_scales, tD, n_frames_load, i)
+                        fake_B_all, fake_B_skipped = get_skipped_frames_sparse(fake_B_all, fake_B, t_scales, tD, n_frames_load, i)
+                        flow_ref_all, flow_ref_skipped = get_skipped_frames_sparse(flow_ref_all, flow_ref, t_scales, tD, n_frames_load, i, is_flow=True)
+                        conf_ref_all, conf_ref_skipped = get_skipped_frames_sparse(conf_ref_all, conf_ref, t_scales, tD, n_frames_load, i, is_flow=True)
+                    else:
+                        real_B_all, real_B_skipped = get_skipped_frames(real_B_all, real_B, t_scales, tD)
+                        fake_B_all, fake_B_skipped = get_skipped_frames(fake_B_all, fake_B, t_scales, tD)                
+                        flow_ref_all, conf_ref_all, flow_ref_skipped, conf_ref_skipped = get_skipped_flows(flowNet, 
+                            flow_ref_all, conf_ref_all, real_B_skipped, flow_ref, conf_ref, t_scales, tD)                         
 
                 # run discriminator for each temporal scale
                 for s in range(t_scales):                
-                    if real_B_skipped[s] is not None and real_B_skipped[s].size()[1] == tD:                        
+                    if real_B_skipped[s] is not None:                        
                         losses = modelD(s+1, [real_B_skipped[s], fake_B_skipped[s], flow_ref_skipped[s], conf_ref_skipped[s]])
                         losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
                         loss_dict_T.append(dict(zip(modelD.module.loss_names_T, losses)))
@@ -185,9 +193,9 @@ def train():
                 if opt.label_nc != 0:
                     input_image = util.tensor2label(real_A[0, -1], opt.label_nc)
                 elif opt.dataset_mode == 'pose':
-                    input_image = util.tensor2im(real_A[0, -1, :3], normalize=False)                    
+                    input_image = util.tensor2im(real_A[0, -1, :3])
                     if real_A.size()[2] == 6:
-                        input_image2 = util.tensor2im(real_A[0, -1, 3:], normalize=False)
+                        input_image2 = util.tensor2im(real_A[0, -1, 3:])
                         input_image[input_image2 != 0] = input_image2[input_image2 != 0]
                 else:
                     c = 3 if opt.input_nc == 3 else 1
@@ -290,6 +298,32 @@ def get_skipped_flows(flowNet, flow_ref_all, conf_ref_all, real_B, flow_ref, con
         if real_B[s] is not None and real_B[s].size()[1] == tD:
             flow_ref_skipped[s], conf_ref_skipped[s] = flowNet(real_B[s][:,1:], real_B[s][:,:-1])
     return flow_ref_all, conf_ref_all, flow_ref_skipped, conf_ref_skipped
+
+def get_skipped_frames_sparse(B_all, B, t_scales, tD, n_frames_load, i, is_flow=False):
+    B_skipped = [None] * t_scales
+    _, _, ch, h, w = B.size()
+    for s in range(t_scales):
+        t_len = B_all[s].size()[1] if B_all[s] is not None else 0
+        if t_len > 0 and (t_len % tD) == 0:
+            B_all[s] = B_all[s][:, (-tD+1):] # get rid of unnecessary past frames        
+
+        if s == 0:
+            B_all[0] = torch.cat([B_all[0].detach(), B], dim=1) if B_all[0] is not None else B
+        else:
+            tDs = tD ** s
+            idx_start = 0 if i == 0 else tDs - ((i-1) % tDs + 1)            
+            if idx_start < n_frames_load:
+                tmp = B[:, idx_start::tDs].contiguous()
+                B_all[s] = torch.cat([B_all[s].detach(), tmp], dim=1) if B_all[s] is not None else tmp
+
+        t_len = B_all[s].size()[1] if B_all[s] is not None else 0
+        if t_len >= tD:            
+            B_all[s] = B_all[s][:, (t_len % tD):]
+            B_skipped[s] = B_all[s].view(-1, tD, ch, h, w)
+            if is_flow:
+                B_skipped[s] = B_skipped[s][:, 1:]
+
+    return B_all, B_skipped
 
 if __name__ == "__main__":
    train()

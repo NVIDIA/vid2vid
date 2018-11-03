@@ -21,7 +21,10 @@ class FaceDataset(BaseDataset):
         self.B_paths = sorted(make_grouped_dataset(self.dir_B))    
         check_path_valid(self.A_paths, self.B_paths)
 
-        self.init_frame_idx(self.A_paths)        
+        self.init_frame_idx(self.A_paths)
+        self.scale_ratio = np.array([[0.9, 1], [1, 1], [0.9, 1], [1, 1.1], [0.9, 0.9], [0.9, 0.9]])#np.random.uniform(0.9, 1.1, size=[6, 2])
+        self.scale_ratio_sym = np.array([[1, 1], [0.9, 1], [1, 1], [0.9, 1], [1, 1], [1, 1]]) #np.random.uniform(0.9, 1.1, size=[6, 2])
+        self.scale_shift = np.zeros((6, 2)) #np.random.uniform(-5, 5, size=[6, 2])
 
     def __getitem__(self, index):
         A, B, I, seq_idx = self.update_frame_idx(self.A_paths, index)        
@@ -29,9 +32,9 @@ class FaceDataset(BaseDataset):
         B_paths = self.B_paths[seq_idx]
         n_frames_total, start_idx, t_step = get_video_params(self.opt, self.n_frames_total, len(A_paths), self.frame_idx)
         
-        B_img = Image.open(B_paths[0]).convert('RGB')
+        B_img = Image.open(B_paths[start_idx]).convert('RGB')
         B_size = B_img.size
-        points = np.loadtxt(A_paths[0], delimiter=',')
+        points = np.loadtxt(A_paths[start_idx], delimiter=',')
         is_first_frame = self.opt.isTrain or not hasattr(self, 'min_x')
         if is_first_frame: # crop only the face region
             self.get_crop_coords(points, B_size)
@@ -114,6 +117,13 @@ class FaceDataset(BaseDataset):
             pts = keypoints[indices, :].astype(np.int32)
             cv2.fillPoly(part_labels, pts=[pts], color=label_list[p]) 
 
+        # move the keypoints a bit
+        if not self.opt.isTrain and self.opt.random_scale_points:
+            self.scale_points(keypoints, part_list[1] + part_list[2], 1, sym=True)
+            self.scale_points(keypoints, part_list[4] + part_list[5], 3, sym=True)
+            for i, part in enumerate(part_list):
+                self.scale_points(keypoints, part, label_list[i]-1)
+
         return keypoints, part_list, part_labels
 
     def draw_face_edges(self, keypoints, part_list, transform_A, size, add_dist_map):
@@ -161,6 +171,35 @@ class FaceDataset(BaseDataset):
             return img[self.min_y:self.max_y, self.min_x:self.max_x]
         else:
             return img.crop((self.min_x, self.min_y, self.max_x, self.max_y))
+
+    def scale_points(self, keypoints, part, index, sym=False):
+        if sym:
+            pts_idx = sum([list(idx) for idx in part], [])
+            pts = keypoints[pts_idx]
+            ratio_x = self.scale_ratio_sym[index, 0]
+            ratio_y = self.scale_ratio_sym[index, 1]
+            mean = np.mean(pts, axis=0)
+            mean_x, mean_y = mean[0], mean[1]
+            for idx in part:
+                pts_i = keypoints[idx]
+                mean_i = np.mean(pts_i, axis=0)
+                mean_ix, mean_iy = mean_i[0], mean_i[1]
+                new_mean_ix = (mean_ix - mean_x) * ratio_x + mean_x
+                new_mean_iy = (mean_iy - mean_y) * ratio_y + mean_y
+                pts_i[:,0] = (pts_i[:,0] - mean_ix) + new_mean_ix
+                pts_i[:,1] = (pts_i[:,1] - mean_iy) + new_mean_iy
+                keypoints[idx] = pts_i
+
+        else:            
+            pts_idx = sum([list(idx) for idx in part], [])
+            pts = keypoints[pts_idx]
+            ratio_x = self.scale_ratio[index, 0]
+            ratio_y = self.scale_ratio[index, 1]
+            mean = np.mean(pts, axis=0)
+            mean_x, mean_y = mean[0], mean[1]            
+            pts[:,0] = (pts[:,0] - mean_x) * ratio_x + mean_x + self.scale_shift[index, 0]
+            pts[:,1] = (pts[:,1] - mean_y) * ratio_y + mean_y + self.scale_shift[index, 1]
+            keypoints[pts_idx] = pts
 
     def __len__(self):
         if self.opt.isTrain:

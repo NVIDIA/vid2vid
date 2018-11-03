@@ -26,6 +26,7 @@ class TrainOptions(BaseOptions):
         self.parser.add_argument('--no_vgg', action='store_true', help='do not use VGG feature matching loss')        
         self.parser.add_argument('--no_ganFeat', action='store_true', help='do not match discriminator features')        
         self.parser.add_argument('--lambda_feat', type=float, default=10.0, help='weight for feature matching')        
+        self.parser.add_argument('--sparse_D', action='store_true', help='use sparse temporal discriminators to save memory')
 
         # for temporal
         self.parser.add_argument('--lambda_T', type=float, default=10.0, help='weight for temporal loss')

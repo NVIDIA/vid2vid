@@ -66,13 +66,15 @@ class BaseOptions():
         # face specific
         self.parser.add_argument('--no_canny_edge', action='store_true', help='do *not* use canny edge as input')
         self.parser.add_argument('--no_dist_map', action='store_true', help='do *not* use distance transform map as input')
+        self.parser.add_argument('--random_scale_points', action='store_true', help='randomly scale face keypoints a bit to create different results')
 
         # pose specific
         self.parser.add_argument('--densepose_only', action='store_true', help='use only densepose as input')
         self.parser.add_argument('--openpose_only', action='store_true', help='use only openpose as input') 
         self.parser.add_argument('--add_face_disc', action='store_true', help='add face discriminator') 
         self.parser.add_argument('--remove_face_labels', action='store_true', help='remove face labels to better adapt to different face shapes')
-        self.parser.add_argument('--random_drop_prob', type=float, default=0.2, help='the probability to randomly drop each pose segment during training')
+        self.parser.add_argument('--random_drop_prob', type=float, default=0.05, help='the probability to randomly drop each pose segment during training')
+        self.parser.add_argument('--basic_point_only', action='store_true', help='only use basic joint keypoints for openpose, without hand or face keypoints')
         
         # miscellaneous                
         self.parser.add_argument('--load_pretrain', type=str, default='', help='if specified, load the pretrained model')                

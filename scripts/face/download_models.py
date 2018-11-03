@@ -1,5 +1,5 @@
 import os
-from scripts.download_gdrive import *
+from download_gdrive import *
 
 file_id = '10LvNw-2lrh-6sPGkWbQDfHspkqz5AKxb'
 chpt_path = './checkpoints/'
