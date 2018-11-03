@@ -29,6 +29,8 @@ Pytorch implementation for high-resolution (e.g., 2048x1024) photorealistic vide
   <img src='imgs/pose.gif' width='440'/>
 </p>
 
+
+
 ## Prerequisites
 - Linux or macOS
 - Python 3
@@ -52,6 +54,8 @@ pip install dlib
 git clone https://github.com/NVIDIA/vid2vid
 cd vid2vid
 ```
+- Docker Image
+If you have difficulty building the repo, a docker image can be found in the `docker` folder.
 
 ### Testing 
 - Please first download example dataset by running `python scripts/download_datasets.py`.
@@ -181,6 +185,7 @@ If you have TensorFlow installed, you can see TensorBoard logs in `./checkpoints
   - `no_first_img`: if not specified, the model will assume the first frame is given and synthesize the successive frames. If specified, the model will also try to synthesize the first frame instead.
   - `fg`: if specified, use the foreground-background separation model as stated in the paper. The foreground labels must be specified by `--fg_labels`.
   - `no_flow`: if specified, do not use flow warping and directly synthesize frames. We found this usually still works reasonably well when the background is static, while saving memory and training time.
+  - `sparse_D`: if specified, only apply temporal discriminator on sparse frames in the sequence. This helps save memory while having little effect on performance.
 - For other flags, please see `options/train_options.py` and `options/base_options.py` for all the training flags; see `options/test_options.py` and `options/base_options.py` for all the test flags.
 
 - Additional flags for edge2face examples:
@@ -192,7 +197,8 @@ If you have TensorFlow installed, you can see TensorBoard logs in `./checkpoints
   - `openpose_only`: use only openpose results as input. Please also remember to change `input_nc` to be 3.
   - `add_face_disc`: add an additional discriminator that only works on the face region.
   - `remove_face_labels`: remove densepose results for face, and add noise to openpose face results, so the network can get more robust to different face shapes. This is important if you plan to do inference on half-body videos (if not, usually this flag is unnecessary).
-  - `random_drop_prob`: the probability to randomly drop each pose segment during training, so the network can get more robust to missing poses at inference time. Default is 0.2.
+  - `random_drop_prob`: the probability to randomly drop each pose segment during training, so the network can get more robust to missing poses at inference time. Default is 0.05.
+  - `basic_point_only`: if specified, only use basic joint keypoints for OpenPose output, without using any hand or face keypoints.
 
 ## Citation
 

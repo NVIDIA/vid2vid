@@ -39,7 +39,7 @@ class TemporalDataset(BaseDataset):
         n_frames_total, start_idx, t_step = get_video_params(self.opt, self.n_frames_total, len(A_paths), index)     
 
         # setting transformers
-        B_img = Image.open(B_paths[0]).convert('RGB')        
+        B_img = Image.open(B_paths[start_idx]).convert('RGB')        
         params = get_img_params(self.opt, B_img.size)          
         transform_scaleB = get_transform(self.opt, params)
         transform_scaleA = get_transform(self.opt, params, method=Image.NEAREST, normalize=False) if self.A_is_label else transform_scaleB

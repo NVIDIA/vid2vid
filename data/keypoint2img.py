@@ -66,11 +66,11 @@ def interpPoints(x, y):
             curve_y = func(curve_x, *popt)
     return curve_x.astype(int), curve_y.astype(int)
 
-def read_keypoints(json_input, size, random_drop_prob=0, remove_face_labels=False):
+def read_keypoints(json_input, size, random_drop_prob=0, remove_face_labels=False, basic_point_only=False):
     with open(json_input, encoding='utf-8') as f:
         keypoint_dicts = json.loads(f.read())["people"]
 
-    edge_lists = define_edge_lists()
+    edge_lists = define_edge_lists(basic_point_only)
     w, h = size    
     pose_img = np.zeros((h, w, 3), np.uint8)
     for keypoint_dict in keypoint_dicts:    
@@ -79,7 +79,7 @@ def read_keypoints(json_input, size, random_drop_prob=0, remove_face_labels=Fals
         hand_pts_l = np.array(keypoint_dict["hand_left_keypoints_2d"]).reshape(21, 3)
         hand_pts_r = np.array(keypoint_dict["hand_right_keypoints_2d"]).reshape(21, 3)            
         pts = [extract_valid_keypoints(pts, edge_lists) for pts in [pose_pts, face_pts, hand_pts_l, hand_pts_r]]           
-        pose_img += connect_keypoints(pts, edge_lists, size, random_drop_prob, remove_face_labels)
+        pose_img += connect_keypoints(pts, edge_lists, size, random_drop_prob, remove_face_labels, basic_point_only)
     return pose_img
 
 def extract_valid_keypoints(pts, edge_lists):
@@ -103,7 +103,7 @@ def extract_valid_keypoints(pts, edge_lists):
         
     return output
 
-def connect_keypoints(pts, edge_lists, size, random_drop_prob, remove_face_labels):
+def connect_keypoints(pts, edge_lists, size, random_drop_prob, remove_face_labels, basic_point_only):
     pose_pts, face_pts, hand_pts_l, hand_pts_r = pts
     w, h = size
     output_edges = np.zeros((h, w, 3), np.uint8)
@@ -122,44 +122,49 @@ def connect_keypoints(pts, edge_lists, size, random_drop_prob, remove_face_label
             curve_x, curve_y = interpPoints(x, y)                                        
             drawEdge(output_edges, curve_x, curve_y, bw=3, color=pose_color_list[i], draw_end_points=True)
 
-    ### hand       
-    for hand_pts in [hand_pts_l, hand_pts_r]:     # for left and right hand
-        if np.random.rand() > random_drop_prob:
-            for i, edge in enumerate(hand_edge_list): # for each finger
-                for j in range(0, len(edge)-1):       # for each part of the finger
-                    sub_edge = edge[j:j+2] 
-                    x, y = hand_pts[sub_edge, 0], hand_pts[sub_edge, 1]                    
-                    if 0 not in x:
-                        line_x, line_y = interpPoints(x, y)                                        
-                        drawEdge(output_edges, line_x, line_y, bw=1, color=hand_color_list[i], draw_end_points=True)
+    if not basic_point_only:
+        ### hand       
+        for hand_pts in [hand_pts_l, hand_pts_r]:     # for left and right hand
+            if np.random.rand() > random_drop_prob:
+                for i, edge in enumerate(hand_edge_list): # for each finger
+                    for j in range(0, len(edge)-1):       # for each part of the finger
+                        sub_edge = edge[j:j+2] 
+                        x, y = hand_pts[sub_edge, 0], hand_pts[sub_edge, 1]                    
+                        if 0 not in x:
+                            line_x, line_y = interpPoints(x, y)                                        
+                            drawEdge(output_edges, line_x, line_y, bw=1, color=hand_color_list[i], draw_end_points=True)
 
-    ### face
-    edge_len = 2
-    if (np.random.rand() > random_drop_prob):
-        for edge_list in face_list:
-            for edge in edge_list:
-                for i in range(0, max(1, len(edge)-1), edge_len-1):             
-                    sub_edge = edge[i:i+edge_len]
-                    x, y = face_pts[sub_edge, 0], face_pts[sub_edge, 1]
-                    if 0 not in x:
-                        curve_x, curve_y = interpPoints(x, y)
-                        drawEdge(output_edges, curve_x, curve_y, draw_end_points=True)
+        ### face
+        edge_len = 2
+        if (np.random.rand() > random_drop_prob):
+            for edge_list in face_list:
+                for edge in edge_list:
+                    for i in range(0, max(1, len(edge)-1), edge_len-1):             
+                        sub_edge = edge[i:i+edge_len]
+                        x, y = face_pts[sub_edge, 0], face_pts[sub_edge, 1]
+                        if 0 not in x:
+                            curve_x, curve_y = interpPoints(x, y)
+                            drawEdge(output_edges, curve_x, curve_y, draw_end_points=True)
 
     return output_edges
 
-def define_edge_lists():
+def define_edge_lists(basic_point_only):
     ### pose        
-    pose_edge_list = [
-        [17, 15], [15,  0], [ 0, 16], [16, 18], [ 0,  1],           # head
-        [ 1,  8],                                                   # body
+    pose_edge_list = []
+    pose_color_list = []
+    if not basic_point_only:
+        pose_edge_list += [[17, 15], [15,  0], [ 0, 16], [16, 18]]       # head
+        pose_color_list += [[153,  0,153], [153,  0,102], [102,  0,153], [ 51,  0,153]]
+
+    pose_edge_list += [        
+        [ 0,  1], [ 1,  8],                                         # body
         [ 1,  2], [ 2,  3], [ 3,  4],                               # right arm
         [ 1,  5], [ 5,  6], [ 6,  7],                               # left arm
         [ 8,  9], [ 9, 10], [10, 11], [11, 24], [11, 22], [22, 23], # right leg
         [ 8, 12], [12, 13], [13, 14], [14, 21], [14, 19], [19, 20]  # left leg
     ]
-    pose_color_list = [
-        [153,  0,153], [153,  0,102], [102,  0,153], [ 51,  0,153], [153,  0, 51],
-        [153,  0,  0],
+    pose_color_list += [
+        [153,  0, 51], [153,  0,  0],
         [153, 51,  0], [153,102,  0], [153,153,  0],
         [102,153,  0], [ 51,153,  0], [  0,153,  0],
         [  0,153, 51], [  0,153,102], [  0,153,153], [  0,153,153], [  0,153,153], [  0,153,153],

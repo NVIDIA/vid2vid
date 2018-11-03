@@ -38,7 +38,7 @@ class Vid2VidModelD(BaseModel):
 
         if opt.add_face_disc:            
             self.netD_f = networks.define_D(netD_input_nc, opt.ndf, opt.n_layers_D, opt.norm,
-                                            opt.num_D - 2, not opt.no_ganFeat, gpu_ids=self.gpu_ids)
+                                            max(1, opt.num_D - 2), not opt.no_ganFeat, gpu_ids=self.gpu_ids)
                     
         # temporal discriminator
         netD_input_nc = opt.output_nc * opt.n_frames_D + 2 * (opt.n_frames_D-1)        
@@ -216,9 +216,9 @@ class Vid2VidModelD(BaseModel):
     def get_face_region(self, real_A):
         _, _, h, w = real_A.size()
         if not self.opt.openpose_only:
-            face = (real_A[:,2] > 0.95).nonzero()
+            face = (real_A[:,2] > 0.9).nonzero()
         else:            
-            face = (((real_A[:,0] == 0.6) | (real_A[:,0] == 0.2)) & (real_A[:,1] == 0) & (real_A[:,2] == 0.6)).nonzero()
+            face = ((real_A[:,0] > 0.19) & (real_A[:,0] < 0.21) & (real_A[:,1] < -0.99) & (real_A[:,2] > -0.61) & (real_A[:,2] < -0.59)).nonzero()
         if face.size()[0]:
             y, x = face[:,1], face[:,2]
             ys, ye, xs, xe = y.min().item(), y.max().item(), x.min().item(), x.max().item()

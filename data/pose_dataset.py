@@ -31,7 +31,7 @@ class PoseDataset(BaseDataset):
         img_paths = self.img_paths[seq_idx]        
         n_frames_total, start_idx, t_step = get_video_params(self.opt, self.n_frames_total, len(img_paths), self.frame_idx)
         
-        img = Image.open(img_paths[0]).convert('RGB')     
+        img = Image.open(img_paths[start_idx]).convert('RGB')     
         size = img.size
         params = get_img_params(self.opt, size)
 
@@ -41,7 +41,7 @@ class PoseDataset(BaseDataset):
             if not self.opt.openpose_only:
                 dp_path = self.dp_paths[seq_idx][start_idx + i * t_step]
                 Di = self.get_image(dp_path, size, params, input_type='densepose')
-                Di[2,:,:] = Di[2,:,:] * 255 / 24
+                Di[2,:,:] = ((Di[2,:,:] * 0.5 + 0.5) * 255 / 24 - 0.5) / 0.5
             if not self.opt.densepose_only:
                 op_path = self.op_paths[seq_idx][start_idx + i * t_step]
                 Oi = self.get_image(op_path, size, params, input_type='openpose')
@@ -71,7 +71,7 @@ class PoseDataset(BaseDataset):
             A_img = Image.open(A_path).convert('RGB')
         else:            
             random_drop_prob = self.opt.random_drop_prob if self.opt.isTrain else 0
-            A_img = Image.fromarray(read_keypoints(A_path, size, random_drop_prob, self.opt.remove_face_labels))            
+            A_img = Image.fromarray(read_keypoints(A_path, size, random_drop_prob, self.opt.remove_face_labels, self.opt.basic_point_only))            
 
         if input_type == 'densepose' and self.opt.isTrain:
             # randomly remove labels
@@ -86,7 +86,7 @@ class PoseDataset(BaseDataset):
 
         is_img = input_type == 'img'
         method = Image.BICUBIC if is_img else Image.NEAREST
-        transform_scaleA = get_transform(self.opt, params, normalize=is_img, method=method)
+        transform_scaleA = get_transform(self.opt, params, method=method)
         A_scaled = transform_scaleA(A_img)
         return A_scaled
 

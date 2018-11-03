@@ -23,8 +23,8 @@ class BaseDataset(data.Dataset):
             print('--------- Updating training sequence length to %d ---------' % self.n_frames_total)
 
     def init_frame_idx(self, A_paths):
-        self.n_of_seqs = len(A_paths)                         # number of sequences to train
-        self.seq_len_max = max([len(A) for A in A_paths])     # max number of frames in the training sequences
+        self.n_of_seqs = min(len(A_paths), self.opt.max_dataset_size)         # number of sequences to train
+        self.seq_len_max = max([len(A) for A in A_paths])                     # max number of frames in the training sequences
 
         self.seq_idx = 0                                                      # index for current sequence
         self.frame_idx = self.opt.start_frame if not self.opt.isTrain else 0  # index for current frame in the sequence
@@ -97,7 +97,7 @@ def get_img_params(opt, size):
     else:
         new_w, new_h = make_power_2(new_w), make_power_2(new_h)
 
-    flip = random.random() > 0.5    
+    flip = (random.random() > 0.5) and (opt.dataset_mode != 'pose')
     return {'new_size': (new_w, new_h), 'crop_size': (crop_w, crop_h), 'crop_pos': (crop_x, crop_y), 'flip': flip}
 
 def get_transform(opt, params, method=Image.BICUBIC, normalize=True, toTensor=True):
