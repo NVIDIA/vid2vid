@@ -38,8 +38,8 @@ Pytorch implementation for high-resolution (e.g., 2048x1024) photorealistic vide
 - Linux or macOS
 - Python 3
 - NVIDIA GPU + CUDA cuDNN
-- PyTorch 0.4
-
+- PyTorch 0.4 or 0.4.1
+  - If using PyTorch 0.4, CUDA 9.0 must be used
 
 ## Getting Started
 ### Installation
