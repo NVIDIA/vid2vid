@@ -9,8 +9,6 @@ import numpy as np
 import torch.nn.functional as F
 import copy
 
-from .flownet2_pytorch.networks.resample2d_package.resample2d import Resample2d
-
 ###############################################################################
 # Functions
 ###############################################################################
@@ -45,9 +43,9 @@ def define_G(input_nc, output_nc, prev_output_nc, ngf, which_model_netG, n_downs
         netG = Local_with_z(input_nc, output_nc, opt.feat_num, ngf, n_downsampling, opt.n_blocks, opt.n_local_enhancers, opt.n_blocks_local, norm_layer)
 
     elif which_model_netG == 'composite':
-        netG = CompositeGenerator(input_nc, output_nc, prev_output_nc, ngf, n_downsampling, opt.n_blocks, opt.fg, opt.no_flow, norm_layer)
+        netG = CompositeGenerator(opt, input_nc, output_nc, prev_output_nc, ngf, n_downsampling, opt.n_blocks, opt.fg, opt.no_flow, norm_layer)
     elif which_model_netG == 'compositeLocal':
-        netG = CompositeLocalGenerator(input_nc, output_nc, prev_output_nc, ngf, n_downsampling, opt.n_blocks_local, opt.fg, opt.no_flow, 
+        netG = CompositeLocalGenerator(opt, input_nc, output_nc, prev_output_nc, ngf, n_downsampling, opt.n_blocks_local, opt.fg, opt.no_flow, 
                                        norm_layer, scale=scale)    
     elif which_model_netG == 'encoder':
         netG = Encoder(input_nc, output_nc, ngf, n_downsampling, norm_layer)
@@ -78,15 +76,50 @@ def print_network(net):
     print(net)
     print('Total number of parameters: %d' % num_params)
 
+def get_grid(batchsize, rows, cols, gpu_id=0, dtype=torch.float32):
+    hor = torch.linspace(-1.0, 1.0, cols)
+    hor.requires_grad = False
+    hor = hor.view(1, 1, 1, cols)
+    hor = hor.expand(batchsize, 1, rows, cols)
+    ver = torch.linspace(-1.0, 1.0, rows)
+    ver.requires_grad = False
+    ver = ver.view(1, 1, rows, 1)
+    ver = ver.expand(batchsize, 1, rows, cols)
+
+    t_grid = torch.cat([hor, ver], 1)
+    t_grid.requires_grad = False
+
+    if dtype == torch.float16: t_grid = t_grid.half()
+    return t_grid.cuda(gpu_id)
+
 ##############################################################################
 # Classes
 ##############################################################################
-class CompositeGenerator(nn.Module):
-    def __init__(self, input_nc, output_nc, prev_output_nc, ngf, n_downsampling, n_blocks, use_fg_model=False, no_flow=False,
+class BaseNetwork(nn.Module):
+    def __init__(self):
+        super(BaseNetwork, self).__init__()
+
+    def grid_sample(self, input1, input2):
+        if self.opt.fp16: # not sure if it's necessary
+            return torch.nn.functional.grid_sample(input1.float(), input2.float(), mode='bilinear', padding_mode='border').half()
+        else:
+            return torch.nn.functional.grid_sample(input1, input2, mode='bilinear', padding_mode='border')
+
+    def resample(self, image, flow):        
+        b, c, h, w = image.size()        
+        if not hasattr(self, 'grid') or self.grid.size() != flow.size():
+            self.grid = get_grid(b, h, w, gpu_id=flow.get_device(), dtype=flow.dtype)            
+        flow = torch.cat([flow[:, 0:1, :, :] / ((w - 1.0) / 2.0), flow[:, 1:2, :, :] / ((h - 1.0) / 2.0)], dim=1)        
+        final_grid = (self.grid + flow).permute(0, 2, 3, 1).cuda(image.get_device())
+        output = self.grid_sample(image, final_grid)
+        return output
+
+class CompositeGenerator(BaseNetwork):
+    def __init__(self, opt, input_nc, output_nc, prev_output_nc, ngf, n_downsampling, n_blocks, use_fg_model=False, no_flow=False,
                 norm_layer=nn.BatchNorm2d, padding_type='reflect'):
         assert(n_blocks >= 0)
-        super(CompositeGenerator, self).__init__()        
-        self.resample = Resample2d()
+        super(CompositeGenerator, self).__init__()                
+        self.opt = opt
         self.n_downsampling = n_downsampling
         self.use_fg_model = use_fg_model
         self.no_flow = no_flow
@@ -198,11 +231,11 @@ class CompositeGenerator(nn.Module):
 
         return img_final, flow, weight, img_raw, img_feat, flow_feat, img_fg_feat
 
-class CompositeLocalGenerator(nn.Module):
-    def __init__(self, input_nc, output_nc, prev_output_nc, ngf, n_downsampling, n_blocks_local, use_fg_model=False, no_flow=False,
+class CompositeLocalGenerator(BaseNetwork):
+    def __init__(self, opt, input_nc, output_nc, prev_output_nc, ngf, n_downsampling, n_blocks_local, use_fg_model=False, no_flow=False,
                  norm_layer=nn.BatchNorm2d, padding_type='reflect', scale=1):        
-        super(CompositeLocalGenerator, self).__init__()        
-        self.resample = Resample2d()        
+        super(CompositeLocalGenerator, self).__init__()                
+        self.opt = opt
         self.use_fg_model = use_fg_model
         self.no_flow = no_flow
         self.scale = scale    
@@ -640,7 +673,8 @@ class MultiscaleDiscriminator(nn.Module):
             if i != (num_D-1):
                 input_downsampled = self.downsample(input_downsampled)                    
         return result
-        
+
+
 # Defines the PatchGAN discriminator with the specified arguments.
 class NLayerDiscriminator(nn.Module):
     def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, getIntermFeat=False):

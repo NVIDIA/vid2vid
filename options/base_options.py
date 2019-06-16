@@ -79,6 +79,8 @@ class BaseOptions():
         # miscellaneous                
         self.parser.add_argument('--load_pretrain', type=str, default='', help='if specified, load the pretrained model')                
         self.parser.add_argument('--debug', action='store_true', help='if specified, use small dataset for debug')
+        self.parser.add_argument('--fp16', action='store_true', default=False, help='train with AMP')
+        self.parser.add_argument('--local_rank', type=int, default=0, help='local rank for distributed training')
 
         self.initialized = True
 

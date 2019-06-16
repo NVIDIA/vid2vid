@@ -54,8 +54,8 @@ class Vid2VidModelG(BaseModel):
         
         # define training variables
         if self.isTrain:            
-            self.n_gpus = self.opt.n_gpus_gen // self.opt.batchSize    # number of gpus for running generator            
-            self.n_frames_bp = 1                                       # number of frames to backpropagate the loss            
+            self.n_gpus = self.opt.n_gpus_gen if self.opt.batchSize == 1 else 1    # number of gpus for running generator            
+            self.n_frames_bp = 1                                                   # number of frames to backpropagate the loss            
             self.n_frames_per_gpu = min(self.opt.max_frames_per_gpu, self.opt.n_frames_total // self.n_gpus) # number of frames in each GPU
             self.n_frames_load = self.n_gpus * self.n_frames_per_gpu   # number of frames in all GPUs            
             if self.opt.debug:
@@ -111,9 +111,12 @@ class Vid2VidModelG(BaseModel):
 
         return input_map, real_image, pool_map
 
-    def forward(self, input_A, input_B, inst_A, fake_B_prev):
+    def forward(self, input_A, input_B, inst_A, fake_B_prev, dummy_bs=0):
         tG = self.opt.n_frames_G           
         gpu_split_id = self.opt.n_gpus_gen + 1        
+        if input_A.get_device() == self.gpu_ids[0]:
+            input_A, input_B, inst_A, fake_B_prev = util.remove_dummy_from_tensor([input_A, input_B, inst_A, fake_B_prev], dummy_bs)
+            if input_A.size(0) == 0: return self.return_dummy(input_A)
         real_A_all, real_B_all, _ = self.encode_input(input_A, input_B, inst_A)        
 
         is_first_frame = fake_B_prev is None
@@ -245,21 +248,15 @@ class Vid2VidModelG(BaseModel):
         fake_B_prev = self.build_pyr(fake_B_prev)
         if not self.opt.isTrain:
             fake_B_prev = [B[0] for B in fake_B_prev]
-        return fake_B_prev
+        return fake_B_prev    
 
-    def build_pyr(self, tensor, nearest=False): # build image pyramid from a single image
-        if tensor is None:
-            return [None] * self.n_scales
-        tensor = [tensor]
-        if nearest:
-            downsample = torch.nn.AvgPool2d(1, stride=2)
-        else:
-            downsample = torch.nn.AvgPool2d(3, stride=2, padding=[1, 1], count_include_pad=False)        
-        for s in range(1, self.n_scales):
-            b, t, c, h, w = tensor[-1].size()
-            down = downsample(tensor[-1].view(-1, h, w)).view(b, t, c, h//2, w//2)
-            tensor.append(down)
-        return tensor
+    def return_dummy(self, input_A):
+        h, w = input_A.size()[3:]
+        t = self.n_frames_load
+        tG = self.opt.n_frames_G  
+        flow, weight = (self.Tensor(1, t, 2, h, w), self.Tensor(1, t, 1, h, w)) if not self.opt.no_flow else (None, None)
+        return self.Tensor(1, t, 3, h, w), self.Tensor(1, t, 3, h, w), flow, weight, \
+               self.Tensor(1, t, self.opt.input_nc, h, w), self.Tensor(1, t+1, 3, h, w), self.build_pyr(self.Tensor(1, tG-1, 3, h, w))
 
     def load_single_G(self): # load the model that generates the first frame
         opt = self.opt     
@@ -322,24 +319,6 @@ class Vid2VidModelG(BaseModel):
         
         return Variable(feat_map)
 
-    def dists_min(self, a, b, num=1):        
-        dists = torch.sum(torch.sum((a-b)*(a-b), dim=0), dim=0)        
-        if num == 1:
-            val, idx = torch.min(dists, dim=0)        
-            #idx = [idx]
-        else:
-            val, idx = torch.sort(dists, dim=0)
-            idx = idx[:num]
-        return idx.cpu().numpy().astype(int)
-
-    def get_edges(self, t):
-        edge = torch.cuda.ByteTensor(t.size()).zero_()
-        edge[:,:,:,:,1:] = edge[:,:,:,:,1:] | (t[:,:,:,:,1:] != t[:,:,:,:,:-1])
-        edge[:,:,:,:,:-1] = edge[:,:,:,:,:-1] | (t[:,:,:,:,1:] != t[:,:,:,:,:-1])
-        edge[:,:,:,1:,:] = edge[:,:,:,1:,:] | (t[:,:,:,1:,:] != t[:,:,:,:-1,:])
-        edge[:,:,:,:-1,:] = edge[:,:,:,:-1,:] | (t[:,:,:,1:,:] != t[:,:,:,:-1,:])
-        return edge.float()        
-
     def compute_mask(self, real_As, ts, te=None): # compute the mask for foreground objects
         _, _, _, h, w = real_As.size() 
         if te is None:
@@ -348,49 +327,14 @@ class Vid2VidModelG(BaseModel):
         for i in range(1, len(self.opt.fg_labels)):
             mask_F = mask_F + real_As[:, ts:te, self.opt.fg_labels[i]]
         mask_F = torch.clamp(mask_F, 0, 1)
-        return mask_F
-    
-    def concat(self, tensors, dim=0):
-        if tensors[0] is not None and tensors[1] is not None:
-            if isinstance(tensors[0], list):                
-                tensors_cat = []
-                for i in range(len(tensors[0])):                    
-                    tensors_cat.append(self.concat([tensors[0][i], tensors[1][i]], dim=dim))                
-                return tensors_cat
-            return torch.cat([tensors[0], tensors[1]], dim=dim)
-        elif tensors[0] is not None:
-            return tensors[0]
-        else:
-            return tensors[1]
+        return mask_F    
+
+    def compute_fake_B_prev(self, real_B_prev, fake_B_last, fake_B):
+        fake_B_prev = real_B_prev[:, 0:1] if fake_B_last is None else fake_B_last[0][:, -1:]
+        if fake_B.size()[1] > 1:
+            fake_B_prev = torch.cat([fake_B_prev, fake_B[:, :-1].detach()], dim=1)
+        return fake_B_prev
 
     def save(self, label):        
         for s in range(self.n_scales):
-            self.save_network(getattr(self, 'netG'+str(s)), 'G'+str(s), label, self.gpu_ids)                
-
-    def update_learning_rate(self, epoch):        
-        lr = self.opt.lr * (1 - (epoch - self.opt.niter) / self.opt.niter_decay)
-        for param_group in self.optimizer_G.param_groups:
-            param_group['lr'] = lr
-        print('update learning rate: %f -> %f' % (self.old_lr, lr))
-        self.old_lr = lr
-
-    def update_fixed_params(self): # finetune all scales instead of just finest scale
-        params = []
-        for s in range(self.n_scales):
-            params += list(getattr(self, 'netG'+str(s)).parameters())
-        self.optimizer_G = torch.optim.Adam(params, lr=self.old_lr, betas=(self.opt.beta1, 0.999))
-        self.finetune_all = True
-        print('------------ Now finetuning all scales -----------')
-
-    def update_training_batch(self, ratio): # increase number of backpropagated frames and number of frames in each GPU
-        nfb = self.n_frames_bp
-        nfl = self.n_frames_load
-        if nfb < nfl:            
-            nfb = min(self.opt.max_frames_backpropagate, 2**ratio)
-            self.n_frames_bp = nfl // int(np.ceil(float(nfl) / nfb))
-            print('-------- Updating number of backpropagated frames to %d ----------' % self.n_frames_bp)
-
-        if self.n_frames_per_gpu < self.opt.max_frames_per_gpu:
-            self.n_frames_per_gpu = min(self.n_frames_per_gpu*2, self.opt.max_frames_per_gpu)
-            self.n_frames_load = self.n_gpus * self.n_frames_per_gpu
-            print('-------- Updating number of frames per gpu to %d ----------' % self.n_frames_per_gpu)
+            self.save_network(getattr(self, 'netG'+str(s)), 'G'+str(s), label, self.gpu_ids)                    

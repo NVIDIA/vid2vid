@@ -8,6 +8,40 @@ import os
 import collections
 from PIL import Image
 import cv2
+from collections import OrderedDict
+
+def save_all_tensors(opt, real_A, fake_B, fake_B_first, fake_B_raw, real_B, flow_ref, conf_ref, flow, weight, modelD):
+    if opt.label_nc != 0:
+        input_image = tensor2label(real_A, opt.label_nc)
+    elif opt.dataset_mode == 'pose':
+        input_image = tensor2im(real_A)
+        if real_A.size()[2] == 6:
+            input_image2 = tensor2im(real_A[0, -1, 3:])
+            input_image[input_image2 != 0] = input_image2[input_image2 != 0]
+    else:
+        c = 3 if opt.input_nc >= 3 else 1
+        input_image = tensor2im(real_A[0, -1, :c], normalize=False)
+    if opt.use_instance:
+        edges = tensor2im(real_A[0, -1, -1:], normalize=False)
+        input_image += edges[:,:,np.newaxis]
+    
+    if opt.add_face_disc:
+        ys, ye, xs, xe = modelD.module.get_face_region(real_A[0, -1:])
+        if ys is not None:
+            input_image[ys, xs:xe, :] = input_image[ye, xs:xe, :] = input_image[ys:ye, xs, :] = input_image[ys:ye, xe, :] = 255 
+
+    visual_list = [('input_image', input_image),
+                   ('fake_image', tensor2im(fake_B)),
+                   ('fake_first_image', tensor2im(fake_B_first)),
+                   ('fake_raw_image', tensor2im(fake_B_raw)),
+                   ('real_image', tensor2im(real_B)),                                                          
+                   ('flow_ref', tensor2flow(flow_ref)),
+                   ('conf_ref', tensor2im(conf_ref, normalize=False))]
+    if flow is not None:
+        visual_list += [('flow', tensor2flow(flow)),
+                        ('weight', tensor2im(weight, normalize=False))]
+    visuals = OrderedDict(visual_list)
+    return visuals
 
 # Converts a Tensor into a Numpy array
 # |imtype|: the desired type of the converted numpy array
@@ -20,8 +54,11 @@ def tensor2im(image_tensor, imtype=np.uint8, normalize=True):
 
     if isinstance(image_tensor, torch.autograd.Variable):
         image_tensor = image_tensor.data
+    if len(image_tensor.size()) == 5:
+        image_tensor = image_tensor[0, -1]
     if len(image_tensor.size()) == 4:
         image_tensor = image_tensor[0]
+    image_tensor = image_tensor[:3]
     image_numpy = image_tensor.cpu().float().numpy()
     if normalize:
         image_numpy = (np.transpose(image_numpy, (1, 2, 0)) + 1) / 2.0 * 255.0
@@ -36,6 +73,8 @@ def tensor2im(image_tensor, imtype=np.uint8, normalize=True):
 def tensor2label(output, n_label, imtype=np.uint8):
     if isinstance(output, torch.autograd.Variable):
         output = output.data
+    if len(output.size()) == 5:
+        output = output[0, -1]
     if len(output.size()) == 4:
         output = output[0]
     output = output.cpu().float()    
@@ -50,6 +89,8 @@ def tensor2label(output, n_label, imtype=np.uint8):
 def tensor2flow(output, imtype=np.uint8):
     if isinstance(output, torch.autograd.Variable):
         output = output.data
+    if len(output.size()) == 5:
+        output = output[0, -1]
     if len(output.size()) == 4:
         output = output[0]
     output = output.cpu().float().numpy()
@@ -64,6 +105,25 @@ def tensor2flow(output, imtype=np.uint8):
     hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
     rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
     return rgb
+
+def add_dummy_to_tensor(tensors, add_size=0):
+    if add_size == 0 or tensors is None: return tensors
+    if isinstance(tensors, list):
+        return [add_dummy_to_tensor(tensor, add_size) for tensor in tensors]    
+    
+    if isinstance(tensors, torch.Tensor):
+        dummy = torch.zeros_like(tensors)[:add_size]
+        tensors = torch.cat([dummy, tensors])
+    return tensors
+
+def remove_dummy_from_tensor(tensors, remove_size=0):
+    if remove_size == 0 or tensors is None: return tensors
+    if isinstance(tensors, list):
+        return [remove_dummy_from_tensor(tensor, remove_size) for tensor in tensors]    
+    
+    if isinstance(tensors, torch.Tensor):
+        tensors = tensors[remove_size:]
+    return tensors
 
 def save_image(image_numpy, image_path):
     image_pil = Image.fromarray(image_numpy)

@@ -1,7 +1,11 @@
 debug*
 checkpoints/
 datasets/
-models/flownet2*
+models/debug*
+models/flownet2*/networks/*/*egg-info
+models/flownet2*/networks/*/build
+models/flownet2*/networks/*/__pycache__
+models/flownet2*/networks/*/dist
 results/
 build/
 */Thumbs.db

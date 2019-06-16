@@ -1,3 +1,4 @@
+from util.util import add_dummy_to_tensor
 import torch.utils.data as data
 import torch
 from PIL import Image
@@ -51,6 +52,32 @@ class BaseDataset(data.Dataset):
                 self.frame_idx = 0
                 self.A, self.B, self.I = None, None, None
             return self.A, self.B, self.I, self.seq_idx
+
+    def init_data_params(self, data, n_gpus, tG):
+        opt = self.opt
+        _, n_frames_total, self.height, self.width = data['B'].size()  # n_frames_total = n_frames_load * n_loadings + tG - 1        
+        n_frames_total = n_frames_total // opt.output_nc
+        n_frames_load = opt.max_frames_per_gpu * n_gpus                # number of total frames loaded into GPU at a time for each batch
+        n_frames_load = min(n_frames_load, n_frames_total - tG + 1)
+        self.t_len = n_frames_load + tG - 1                             # number of loaded frames plus previous frames
+        return n_frames_total-self.t_len+1, n_frames_load, self.t_len
+
+    def init_data(self, t_scales):
+        fake_B_last = None  # the last generated frame from previous training batch (which becomes input to the next batch)
+        real_B_all, fake_B_all, flow_ref_all, conf_ref_all = None, None, None, None # all real/generated frames so far
+        if self.opt.sparse_D:
+            real_B_all, fake_B_all, flow_ref_all, conf_ref_all = [None]*t_scales, [None]*t_scales, [None]*t_scales, [None]*t_scales
+        
+        frames_all = real_B_all, fake_B_all, flow_ref_all, conf_ref_all        
+        return fake_B_last, frames_all
+
+    def prepare_data(self, data, i, input_nc, output_nc):
+        t_len, height, width = self.t_len, self.height, self.width
+        # 5D tensor: batchSize, # of frames, # of channels, height, width
+        input_A = (data['A'][:, i*input_nc:(i+t_len)*input_nc, ...]).view(-1, t_len, input_nc, height, width)
+        input_B = (data['B'][:, i*output_nc:(i+t_len)*output_nc, ...]).view(-1, t_len, output_nc, height, width)                
+        inst_A = (data['inst'][:, i:i+t_len, ...]).view(-1, t_len, 1, height, width) if len(data['inst'].size()) > 2 else None
+        return [input_A, input_B, inst_A]
 
 def make_power_2(n, base=32.0):    
     return int(round(n / base) * base)
@@ -152,7 +179,7 @@ def get_video_params(opt, n_frames_total, cur_seq_len, index):
     if opt.isTrain:        
         n_frames_total = min(n_frames_total, cur_seq_len - tG + 1)
 
-        n_gpus = opt.n_gpus_gen // opt.batchSize                   # number of generator GPUs for each batch
+        n_gpus = opt.n_gpus_gen if opt.batchSize == 1 else 1       # number of generator GPUs for each batch
         n_frames_per_load = opt.max_frames_per_gpu * n_gpus        # number of frames to load into GPUs at one time (for each batch)
         n_frames_per_load = min(n_frames_total, n_frames_per_load)
         n_loadings = n_frames_total // n_frames_per_load           # how many times are needed to load entire sequence into GPUs         

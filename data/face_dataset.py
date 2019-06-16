@@ -158,12 +158,14 @@ class FaceDataset(BaseDataset):
 
     def get_crop_coords(self, keypoints, size):                
         min_y, max_y = keypoints[:,1].min(), keypoints[:,1].max()
-        min_x, max_x = keypoints[:,0].min(), keypoints[:,0].max()
-        offset = (max_x - min_x) // 2
-        min_y = max(0, min_y - offset*2)
-        min_x = max(0, min_x - offset)
-        max_x = min(size[0], max_x + offset)
-        max_y = min(size[1], max_y + offset)
+        min_x, max_x = keypoints[:,0].min(), keypoints[:,0].max()                
+        xc = (min_x + max_x) // 2
+        yc = (min_y*3 + max_y) // 4
+        h = w = (max_x - min_x) * 2.5        
+        xc = min(max(0, xc - w//2) + w, size[0]) - w//2
+        yc = min(max(0, yc - h//2) + h, size[1]) - h//2
+        min_x, max_x = xc - w//2, xc + w//2
+        min_y, max_y = yc - h//2, yc + h//2        
         self.min_y, self.max_y, self.min_x, self.max_x = int(min_y), int(max_y), int(min_x), int(max_x)        
 
     def crop(self, img):

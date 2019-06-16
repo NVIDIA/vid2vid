@@ -32,7 +32,7 @@ class TrainOptions(BaseOptions):
         self.parser.add_argument('--lambda_T', type=float, default=10.0, help='weight for temporal loss')
         self.parser.add_argument('--lambda_F', type=float, default=10.0, help='weight for flow loss')
         self.parser.add_argument('--n_frames_D', type=int, default=3, help='number of frames to feed into temporal discriminator')        
-        self.parser.add_argument('--n_scales_temporal', type=int, default=3, help='number of temporal scales in the temporal discriminator')        
+        self.parser.add_argument('--n_scales_temporal', type=int, default=2, help='number of temporal scales in the temporal discriminator')        
         self.parser.add_argument('--max_frames_per_gpu', type=int, default=1, help='max number of frames to load into one GPU at a time')
         self.parser.add_argument('--max_frames_backpropagate', type=int, default=1, help='max number of frames to backpropagate') 
         self.parser.add_argument('--max_t_step', type=int, default=1, help='max spacing between neighboring sampled frames. If greater than 1, the network may randomly skip frames during training.')
