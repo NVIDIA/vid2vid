@@ -45,21 +45,21 @@ def train():
             # whether to collect output images
             save_fake = total_steps % opt.display_freq == 0
             n_frames_total, n_frames_load, t_len = data_loader.dataset.init_data_params(data, n_gpus, tG)
-            fake_B_last, frames_all = data_loader.dataset.init_data(t_scales)
+            fake_B_prev_last, frames_all = data_loader.dataset.init_data(t_scales)
 
             for i in range(0, n_frames_total, n_frames_load):
                 input_A, input_B, inst_A = data_loader.dataset.prepare_data(data, i, input_nc, output_nc)
                 
                 ###################################### Forward Pass ##########################
                 ####### generator                  
-                fake_B, fake_B_raw, flow, weight, real_A, real_Bp, fake_B_last = modelG(input_A, input_B, inst_A, fake_B_last)
+                fake_B, fake_B_raw, flow, weight, real_A, real_Bp, fake_B_last = modelG(input_A, input_B, inst_A, fake_B_prev_last)
 
                 ####### discriminator            
                 ### individual frame discriminator          
                 real_B_prev, real_B = real_Bp[:, :-1], real_Bp[:, 1:]   # the collection of previous and current real frames
-                flow_ref, conf_ref = flowNet(real_B, real_B_prev)       # reference flows and confidences
-                #flow_ref, conf_ref = util.remove_dummy_from_tensor([flow_ref, conf_ref])
-                fake_B_prev = modelG.module.compute_fake_B_prev(real_B_prev, fake_B_last, fake_B)
+                flow_ref, conf_ref = flowNet(real_B, real_B_prev)       # reference flows and confidences                
+                fake_B_prev = modelG.module.compute_fake_B_prev(real_B_prev, fake_B_prev_last, fake_B)
+                fake_B_prev_last = fake_B_last
                
                 losses = modelD(0, reshape([real_B, fake_B, fake_B_raw, real_A, real_B_prev, fake_B_prev, flow, weight, flow_ref, conf_ref]))
                 losses = [ torch.mean(x) if x is not None else 0 for x in losses ]
