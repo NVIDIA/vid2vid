@@ -1,4 +1,5 @@
 import os, sys
+import numpy as np
 import torch
 from .networks import get_grid
 
@@ -150,9 +151,9 @@ class BaseModel(torch.nn.Module):
         edge[:,:,:,:-1,:] = edge[:,:,:,:-1,:] | (t[:,:,:,1:,:] != t[:,:,:,:-1,:])
         return edge.float()       
         
-    def update_learning_rate(self, epoch):        
+    def update_learning_rate(self, epoch, model):        
         lr = self.opt.lr * (1 - (epoch - self.opt.niter) / self.opt.niter_decay)
-        for param_group in self.optimizer_D.param_groups:
+        for param_group in getattr(self, 'optimizer_' + model).param_groups:
             param_group['lr'] = lr
         print('update learning rate: %f -> %f' % (self.old_lr, lr))
         self.old_lr = lr

@@ -30,7 +30,7 @@ def train():
 
     ### set parameters    
     n_gpus, tG, tD, tDB, s_scales, t_scales, input_nc, output_nc, \
-        start_epoch, epoch_iter, print_freq, total_steps, iter_path = init_params(opt, modelG, modelD, dataset_size)
+        start_epoch, epoch_iter, print_freq, total_steps, iter_path = init_params(opt, modelG, modelD, data_loader)
     visualizer = Visualizer(opt)    
 
     ### real training starts here  
