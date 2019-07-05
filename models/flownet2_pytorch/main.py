@@ -261,7 +261,7 @@ if __name__ == '__main__':
 
             data, target = [Variable(d) for d in data], [Variable(t) for t in target]
             if args.cuda and args.number_gpus == 1:
-                data, target = [d.cuda(async=True) for d in data], [t.cuda(async=True) for t in target]
+                data, target = [d.cuda(non_blocking=True) for d in data], [t.cuda(non_blocking=True) for t in target]
 
             optimizer.zero_grad() if not is_validate else None
             losses = model(data[0], target[0])
@@ -357,7 +357,7 @@ if __name__ == '__main__':
         total_loss = 0
         for batch_idx, (data, target) in enumerate(progress):
             if args.cuda:
-                data, target = [d.cuda(async=True) for d in data], [t.cuda(async=True) for t in target]
+                data, target = [d.cuda(non_blocking=True) for d in data], [t.cuda(non_blocking=True) for t in target]
             data, target = [Variable(d) for d in data], [Variable(t) for t in target]
 
             # when ground-truth flows are not available for inference_dataset, 
