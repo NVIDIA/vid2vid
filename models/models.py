@@ -78,7 +78,7 @@ def create_model(opt):
         modelD.initialize(opt)
         flowNet.initialize(opt)        
         if not opt.fp16:
-            modelG, modelD, flownet = wrap_model(opt, modelG, modelD, flowNet)
+            modelG, modelD, flowNet = wrap_model(opt, modelG, modelD, flowNet)
         return [modelG, modelD, flowNet]
     else:
         return modelG
