@@ -129,7 +129,9 @@ class Vid2VidModelG(BaseModel):
             netG_s = torch.nn.parallel.replicate(netG_s, self.opt.gpu_ids[:gpu_split_id]) if self.split_gpus else [netG_s]
             netG.append(netG_s)
 
-        start_gpu = self.gpu_ids[1] if self.split_gpus else real_A_all.get_device()        
+        start_gpu = self.gpu_ids[1] if self.split_gpus else real_A_all.get_device()  
+
+        # THIS IS WHERE ACTUAL FORWARD PROP HAPPENS 
         fake_B, fake_B_raw, flow, weight = self.generate_frame_train(netG, real_A_all, fake_B_prev, start_gpu, is_first_frame)        
         fake_B_prev = [B[:, -tG+1:].detach() for B in fake_B]
         fake_B = [B[:, tG-1:] for B in fake_B]
