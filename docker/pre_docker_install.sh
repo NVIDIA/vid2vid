@@ -37,7 +37,7 @@ DEBIAN_FRONTEND=noninteractive
 sudo apt-get install -y keyboard-configuration
 sudo apt install -y ubuntu-drivers-common
 
-apt-get install -y nvidia-384
+sudo apt-get install -y nvidia-384
 
 #Reboot so the nvidia driver finishes install
 sudo reboot
